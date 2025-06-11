@@ -1,0 +1,51 @@
+schemas:
+  common_fields:
+    _id: str
+    type: str
+    profile:
+      address: str # general information
+      pet_name: str # will be used to generate customized telegram messages
+      user: str # telegram account unique identificator linked to smart home
+    metadata:
+      created_at: datetime
+      updated_at: datetime
+
+  entity:
+    data:
+      list_of_rooms: List[str] # list of id of rooms linked to account
+      list_of_devices: List[str] # list of id of door DTs (NodeMCU) linked to account
+      fault_status: bool # false if no device is faulted (powerstatus == false), true otherwise
+
+  validations:
+    mandatory_fields:
+      root:
+        - _id
+        - type
+      profile:
+        - address
+        - user
+      metadata:
+        - created_at
+        - updated_at
+
+    type_constraints:
+      address:
+        type: str
+      pet_name:
+        type: str
+      user:
+        type: str
+      list_of_rooms:
+        type: List[str]
+      list_of_devices:
+        type: List[str]
+      fault_status:
+        type: bool
+
+
+    initialization:
+      profile:
+        pet_name: "Pet"
+      fault_status: False
+      list_of_devices: []
+      list_of_rooms: [] # it should come with the "somewhere else" room id by default, but we have no way of specifying it

@@ -1,0 +1,62 @@
+schemas:
+  common_fields:
+    _id: str
+    type: str
+    profile:
+      device_name: str
+      seq_number: int   #device_name@seq_number is the full name of the device (normally NodeMCU@seq_number)
+    metadata:
+      created_at: datetime
+      updated_at: datetime
+
+  entity:
+    data: # we will get the denial statuses from the room assignments
+      power_saving_mode_status: bool
+      power_status: bool # True if ON and connected, False if OFF or disconnected
+      entry_side_room_id: str # the id of the room assigned to the entry side
+      exit_side_room_id: str # the id of the room assigned to the exit side
+      passing_by_detections: List[Dict] # List of all past entry/exit actions of the pet through this door DT
+
+  validations:
+    mandatory_fields:
+      root:
+        - _id
+        - type
+      profile:
+        - device_name
+        - seq_number
+      metadata:
+        - created_at
+        - updated_at
+
+    type_constraints:
+      device_name:
+        type: str
+        enum: ["NodeMCU"]
+      seq_number:
+        type: int
+        min: 1
+        max: 20 # max 20 devices per user
+      power_saving_mode_status:
+        type: bool
+      power_status:
+        type: bool
+      entry_side_room_id:
+        type: str
+      exit_side_room_id:
+        type: str
+      passing_by_detections:
+        type: List[Dict]
+        item_constraints:
+          required_fields: ["action", "timestamp"]
+          type_mappings:
+            action: str
+            timestamp: datetime
+
+    initialization:
+      device_name: "NodeMCU"
+      power_status: True
+      power_saving_mode_status: True
+      entry_side_denial_status: False
+      exit_side_denial_status: False
+      passing_by_detections: []

@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.12 (InternetOfThings_Architecture_Database_lecture)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 (InternetOfThings_Architecture_Database_lecture)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.9 (petTrackerIOT)" project-jdk-type="Python SDK" />
 </project>
