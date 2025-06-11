@@ -1,4 +1,4 @@
-schemas:
+schemas:  # TODO: delete deprecated data entries
   common_fields:
     _id: str
     type: str
@@ -13,8 +13,12 @@ schemas:
       vacancy_status: bool # false if pet is inside room, true if pet is outside room
       denial_status: bool # false if feedback mechanism is deactivated for all devices' sides facing the room, true otherwise
       last_time_accessed: datetime # -1 if room was never accessed
-      pet_accesses: List[Dict] # dictionary of accesses, elements contain timestamp_of_access and duration
-      denial_statuses: List[Dict] # dictionary of past denial setting, elements contain timestamp_of_setting and duration
+      # BOTH DEPRECATED: PORTED BACK TO NET4uCA's MEASUREMENTS FIELD, TO ALLOW USE WITH THEIR ANALYTICS ENGINE... SEE door.yaml.
+      #pet_accesses: List[Dict] # dictionary of accesses, elements contain timestamp_of_access and duration
+      #denial_statuses: List[Dict] # dictionary of past denial setting, elements contain timestamp_of_setting and duration
+      measurements: List[Dict] # each pet access will be stored as a measurement with type "pet_access", value equal to the duration and timestamp of access
+                               # each denial status setting will be stores as another measurement with type "denial_status_change", value equal to the duration and timestamp of the setting
+
 
   validations:
     mandatory_fields:
@@ -36,24 +40,34 @@ schemas:
         type: bool
       last_time_accessed:
         type: datetime
-      pet_accesses:
+#      pet_accesses:
+#        type: List[Dict]
+#        item_constraints:
+#          required_fields: ["timestamp_of_access", "duration"]
+#          type_mappings:
+#            timestamp_of_access: datetime
+#            duration: int # seconds, can be -1 if room is still occupied by the pet
+#      denial_statuses:
+#        type: List[Dict]
+#        item_constraints:
+#          required_fields: [ "timestamp_of_setting", "duration" ]
+#          type_mappings:
+#            timestamp_of_setting: datetime
+#            duration: int # seconds, can be -1 if room is still in denial
+      measurements:
         type: List[Dict]
         item_constraints:
-          required_fields: ["timestamp_of_access", "duration"]
+          required_fields: [ "type", "value", "timestamp" ]
           type_mappings:
-            timestamp_of_access: datetime
-            duration: int # seconds, can be -1 if room is still occupied by the pet
-      denial_statuses:
-        type: List[Dict]
-        item_constraints:
-          required_fields: [ "timestamp_of_setting", "duration" ]
-          type_mappings:
-            timestamp_of_setting: datetime
-            duration: int # seconds, can be -1 if room is still in denial
+            type: str
+            value: float
+            timestamp: datetime
+
 
     initialization:
       name: "Random room"
       vacancy_status: True
       denial_status: False
-      pet_accesses: []
-      denial_statuses: []
+#      pet_accesses: []
+#      denial_statuses: []
+      measurements: []

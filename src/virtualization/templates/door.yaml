@@ -1,4 +1,4 @@
-schemas:
+schemas:   # TODO: delete deprecated data entries
   common_fields:
     _id: str
     type: str
@@ -15,7 +15,12 @@ schemas:
       power_status: bool # True if ON and connected, False if OFF or disconnected
       entry_side_room_id: str # the id of the room assigned to the entry side
       exit_side_room_id: str # the id of the room assigned to the exit side
-      passing_by_detections: List[Dict] # List of all past entry/exit actions of the pet through this door DT
+      override_entry_side_room_id: str # mirror as above, but when fault override is active they may not have the same values!
+      override_exit_side_room_id: str
+      # passing_by_detections: List[Dict] # List of all past entry/exit actions of the pet through this door DT
+      measurements: List[Dict] # mirror of DEPRECATED passing_by_detections, written as a series of measurements to be used with the Net4uCA framework's analytics module:
+                               # each entry/exit action measurement will be of type "entry" or "exit", value of +1.0 (always) and relative action's timestamp.
+                               # >>> We deemed it necessary to use passing_by_detections just for readability reasons. <<<
 
   validations:
     mandatory_fields:
@@ -45,12 +50,20 @@ schemas:
         type: str
       exit_side_room_id:
         type: str
-      passing_by_detections:
+      #passing_by_detections:
+      #  type: List[Dict]
+      #  item_constraints:
+      #    required_fields: ["action", "timestamp"]
+      #    type_mappings:
+      #      action: str
+      #      timestamp: datetime
+      measurements:
         type: List[Dict]
         item_constraints:
-          required_fields: ["action", "timestamp"]
+          required_fields: [ "type", "value", "timestamp" ]
           type_mappings:
-            action: str
+            type: str
+            value: float
             timestamp: datetime
 
     initialization:
@@ -59,4 +72,5 @@ schemas:
       power_saving_mode_status: True
       entry_side_denial_status: False
       exit_side_denial_status: False
-      passing_by_detections: []
+      #passing_by_detections: []
+      measurements: []
