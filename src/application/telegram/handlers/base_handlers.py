@@ -1,13 +1,40 @@
 from telegram import Update
 from telegram.ext import ContextTypes
+from flask import \
+    current_app as app  # we need this to access the database, we registered it under app.config["DB_SERVICE"]
+
+
+async def check_if_registered(update):
+    try:
+        telegram_id = update.effective_user.id
+
+        # Does the user have a registered home in our system?
+        db_service = app.config["DB_SERVICE"]
+        users = db_service.query_drs(
+            "smart_home", {"profile.user": telegram_id}
+        )
+        if users:
+            return True
+        else:
+            return False
+    except Exception as e:
+        await update.message.reply_text(f"Error during user search: {str(e)}")
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler for the /start command"""
-    await update.message.reply_text(
-        "Ciao! I'm your pet tracker controller.\n"
-        "Use /help to show all the possible commands."
-    )
+
+    if check_if_registered(update):
+        await update.message.reply_text(
+            f"Hi {update.effective_user.username}! I'm your pet tracker controller.\n"
+            "Use /help to show all the possible commands."
+        )
+    else:
+        await update.message.reply_text(
+            "You are not a registered user.\n"
+            "If you have already bought our product, please, contact support at 123-456-7890"
+        )
+
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
