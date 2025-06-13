@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 from datetime import datetime
 from bson import ObjectId
-from src.services.database_service import DatabaseService
+from database import Database
 from src.virtualization.digital_replica.schema_registry import SchemaRegistry
 from src.digital_twin.core import DigitalTwin
 
@@ -9,7 +9,7 @@ from src.digital_twin.core import DigitalTwin
 class DTFactory:
     """Factory class for creating and managing Digital Twins"""
 
-    def __init__(self, db_service: DatabaseService, schema_registry: SchemaRegistry):
+    def __init__(self, db_service: Database, schema_registry: SchemaRegistry):
         self.db_service = db_service
         self.schema_registry = schema_registry
         self._init_dt_collection()

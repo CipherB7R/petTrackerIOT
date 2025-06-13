@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from flask import \
-    current_app as app  # we need this to access the database, we registered it under app.config["DB_SERVICE"]
+    current_app as app  # we need this to access the dr factories, we registered them under app.config dictionary.
 
 
 async def check_if_registered(update):
@@ -9,8 +9,8 @@ async def check_if_registered(update):
         telegram_id = update.effective_user.id
 
         # Does the user have a registered home in our system?
-        db_service = app.config["DB_SERVICE"]
-        users = db_service.query_drs(
+        dr_factory = app.config["DR_FACTORY"]
+        users = dr_factory.query_drs(
             "smart_home", {"profile.user": telegram_id}
         )
         if users:

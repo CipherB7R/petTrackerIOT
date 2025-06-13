@@ -54,7 +54,7 @@ def list_digital_twins():
 def get_digital_replica(dr_type, dr_id):
     """Get Digital Replica details"""
     try:
-        dr = current_app.config['DB_SERVICE'].get_dr(dr_type, dr_id)
+        dr = current_app.config['DR_FACTORY'].get_dr(dr_type, dr_id)
         if not dr:
             return jsonify({'error': 'Digital Replica not found'}), 404
         return jsonify(dr), 200

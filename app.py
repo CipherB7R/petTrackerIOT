@@ -1,9 +1,9 @@
-from logging import exception, debug
-
 from flask import Flask
 from flask_cors import CORS
+
+from src.virtualization.digital_replica.dr_factory import DRFactory
 from src.virtualization.digital_replica.schema_registry import SchemaRegistry
-from src.services.database_service import DatabaseService
+from database import Database
 from src.digital_twin.dt_factory import DTFactory
 from src.application.api import register_api_blueprints
 from config.config_loader import ConfigLoader
@@ -132,7 +132,7 @@ class FlaskServer:
             ################################################
 
             # Initialize DatabaseService with populated schema_registry
-            db_service = DatabaseService(
+            db_service = Database(
                 connection_string=connection_string,
                 db_name=db_config["settings"]["name"],
                 schema_registry=schema_registry,
@@ -142,10 +142,14 @@ class FlaskServer:
             # Initialize DTFactory
             dt_factory = DTFactory(db_service, schema_registry)
 
+            # Initialize DRFactory
+            dr_factory = DRFactory(db_service, schema_registry)
+
             # Store references
             self.app.config["SCHEMA_REGISTRY"] = schema_registry
             self.app.config["DB_SERVICE"] = db_service
             self.app.config["DT_FACTORY"] = dt_factory
+            self.app.config["DR_FACTORY"] = dr_factory
 
         except Exception as e:
             print(f"Initialization error: {str(e)}")

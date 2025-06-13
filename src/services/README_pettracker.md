@@ -28,7 +28,7 @@ we may attach it to a lot of different DT types: in fact, we will associate it t
 
 For the latter type, we have our pet-tracking services, which require the presence of some field you will rarely see in other IOT applications.
 
-In the following sections, you will read about the purposes of each file in this directory, minus the base.py and database_service.py which are self explanatory.
+In the following sections, you will read about the purposes of each file in this directory, minus the base.py which is self explanatory.
 
 # analytics.py
 This file contains many service definitions: they are all subclasses of the BaseService class that exposes the execute() method.
