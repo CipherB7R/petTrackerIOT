@@ -12,7 +12,8 @@ class BaseService(ABC):
         """
         Execute the service on provided data
         Args:
-            data: Input data in any format
+            data: Input data in any format. Must contain at least the "digital_replicas" key,
+                  which in turn must contain all the data pertaining to the caller DT's DRs.
             dr_type: Type of DR to process
             attribute: Specific attribute to analyze
         Returns:
