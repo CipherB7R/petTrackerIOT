@@ -8,7 +8,7 @@ from src.digital_twin.dt_factory import DTFactory
 from src.application.api import register_api_blueprints
 from config.config_loader import ConfigLoader
 
-from src.application.mqtt_handler import DoorMQTTHandler
+from src.application.mqtt.mqtt_handler import DoorMQTTHandler
 
 from pyngrok import ngrok
 from telegram.ext import Application, CommandHandler, MessageHandler, filters

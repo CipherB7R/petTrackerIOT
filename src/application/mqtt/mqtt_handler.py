@@ -91,6 +91,13 @@ class DoorMQTTHandler:
         # TODO: insert here all handlers, one by one, filtering by topic.
         pass
 
+    @property
+    def is_connected(self):
+        """Check if client is currently connected"""
+        return self.connected
+
+    # ALL THE METHODS DEFINED BELOW BELONG TO THE PET-TRACKER IOT SOFTWARE
+
     def publish_power_saving_mode(self, user: str, device_seq_number: int, state: bool, device_name: str = 'NodeMCU'):
         """Publish a power saving mode state change"""
         if not self.connected:
@@ -123,9 +130,3 @@ class DoorMQTTHandler:
             self.client.publish(topic, json.dumps(payload), qos=1, retain=True)
         except Exception as e:
             self.app.logger.error(f"Error publishing LED state: {e}")
-
-
-    @property
-    def is_connected(self):
-        """Check if client is currently connected"""
-        return self.connected
