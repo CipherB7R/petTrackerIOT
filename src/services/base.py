@@ -8,7 +8,7 @@ class BaseService(ABC):
         self.name = self.__class__.__name__
 
     def __call__(self, *args, **kwargs):
-        self.__init__()
+        return self
 
     @abstractmethod
     def execute(self, data: Dict, dr_type: str = None, attribute: str = None) -> Any:
