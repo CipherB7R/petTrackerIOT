@@ -14,7 +14,7 @@ class DigitalTwin:
         """Aggiunge una Digital Replica al twin"""
         self.digital_replicas.append(dr_instance)
 
-    def add_service(self, service: BaseService):
+    def add_service(self, service):
         """Add a service to the DT"""
         if isinstance(service, type):
             # If a class is passed, instantiate it
