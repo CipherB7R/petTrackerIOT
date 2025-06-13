@@ -37,7 +37,7 @@ class AggregationService(BaseService):
                 if attribute:
                     # Filter measurements by attribute
                     measurements = [m for m in measurements
-                                    if m['measure_type'] == attribute]
+                                    if m['type'] == attribute]
                 all_measurements.extend(measurements)
 
         if not all_measurements:
@@ -46,7 +46,7 @@ class AggregationService(BaseService):
         # Group measurements by type
         grouped_measurements = {}
         for measure in all_measurements:
-            measure_type = measure['measure_type']
+            measure_type = measure['type']
             if measure_type not in grouped_measurements:
                 grouped_measurements[measure_type] = []
             grouped_measurements[measure_type].append(float(measure['value']))
