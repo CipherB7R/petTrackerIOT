@@ -11,7 +11,7 @@ from threading import Thread, Event
 class DoorMQTTHandler:
     def __init__(self, app):
         self.app = app
-        self.client = mqtt.Client()
+        self.client = mqtt.Client(client_id="1", clean_session=False)
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
         self.client.on_disconnect = self._on_disconnect
@@ -101,7 +101,7 @@ class DoorMQTTHandler:
         payload = {"state": state, "timestamp": datetime.utcnow().isoformat()}
 
         try:
-            self.client.publish(topic, json.dumps(payload))
+            self.client.publish(topic, json.dumps(payload), qos=1, retain=True)
             self.app.logger.info(f"Published power saving state {state} for {device_name}@{device_seq_number} on behalf of user {user}")
         except Exception as e:
             self.app.logger.error(f"Error publishing LED state: {e}")
@@ -119,8 +119,8 @@ class DoorMQTTHandler:
         payload = {"setting": setting, "timestamp": datetime.utcnow().isoformat()}
 
         try:
-            self.client.publish(topic, json.dumps(payload))
             self.app.logger.info(f"Published denial setting {setting} for {device_name}@{device_seq_number} on behalf of user {user}")
+            self.client.publish(topic, json.dumps(payload), qos=1, retain=True)
         except Exception as e:
             self.app.logger.error(f"Error publishing LED state: {e}")
 
