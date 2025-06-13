@@ -18,13 +18,13 @@ async def check_if_registered(update):
         else:
             return False
     except Exception as e:
-        await update.message.reply_text(f"Error during user search: {str(e)}")
+        app.logger.error(f"Error during user search: {str(e)}")
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler for the /start command"""
 
-    if check_if_registered(update):
+    if await check_if_registered(update):
         await update.message.reply_text(
             f"Hi {update.effective_user.username}! I'm your pet tracker controller.\n"
             "Use /help to show all the possible commands."
