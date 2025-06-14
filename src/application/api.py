@@ -62,6 +62,18 @@ def get_digital_replica(dr_type, dr_id):
         return jsonify({'error': str(e)}), 500
 
 
+# Generic Digital Replica APIs
+@dr_api.route('/<dr_type>', methods=['GET'])
+def list_digital_replicas(dr_type):
+    """Get a list of all digital Replicas"""
+    try:
+        dr = current_app.config['DR_FACTORY'].query_drs(dr_type)  # calling it without a query wil return all DRs pertaining to a type
+        if not dr:
+            return jsonify({'error': 'Digital Replica not found'}), 404
+        return jsonify(dr), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # Digital Twin Management APIs
 @dt_management_api.route('/assign/<dt_id>', methods=['POST'])
 def assign_dr_to_dt(dt_id):
