@@ -50,6 +50,10 @@ schemas:   # TODO: delete deprecated data entries
         type: str
       exit_side_room_id:
         type: str
+      override_entry_side_room_id:
+        type: str
+      override_exit_side_room_id:
+        type: str
       #passing_by_detections:
       #  type: List[Dict]
       #  item_constraints:
@@ -70,7 +74,5 @@ schemas:   # TODO: delete deprecated data entries
       device_name: "NodeMCU"
       power_status: True
       power_saving_mode_status: True
-      entry_side_denial_status: False
-      exit_side_denial_status: False
       #passing_by_detections: []
       measurements: []
