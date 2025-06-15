@@ -111,7 +111,6 @@ class FlaskServer:
             print(f"Webhook URL: {webhook_url}")
             ####################################################
 
-
             # Now that we have a public reachable URL, which will relay to our port 88 all the HTTP requests,
             # we need to...
             # TELEGRAM INITIALIZATION########################
@@ -173,6 +172,8 @@ class FlaskServer:
                 self.app.config["DB_SERVICE"].disconnect()
             if self.ngrok_tunnel:
                 ngrok.disconnect(self.ngrok_tunnel.public_url)
+            if self.mqtt_handler:
+                self.mqtt_handler.stop()
 
 
 if __name__ == "__main__":
