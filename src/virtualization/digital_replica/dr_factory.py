@@ -268,9 +268,11 @@ class DRFactory:
         try:
             # Get collection name and validation schema from registry
             collection_name = self.db_service.schema_registry.get_collection_name(dr_type)
-            validation_schema = self.db_service.schema_registry.get_validation_schema(dr_type)
 
             # The SchemaRegistry handles ALL validation - no type-specific logic here!
+            # Where is the validation? The schema registry is not doing anything (problem with net4uCA framework)!
+            # Nevermind... it's before! We use save_dr() inside create_dr(), and SchemaRegistry is used inside create_dr()!!!!
+            # validation is done, don't worry!
             collection = self.db_service.db[collection_name]
 
             result = collection.insert_one(dr_data)
