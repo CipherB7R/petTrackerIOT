@@ -6,10 +6,12 @@ thanks to this file Flask can receive/send publish messages from/to Doors DRs (N
 When the MQTT handler receives a message from the Mosquitto Broker,
 it scans its topic using the code contained in the _on_message subroutine.
 Based on the topic, the message gets relayed to one of the sub-handlers defined by us
-(one or more per functional requirement).
+(one or more per functional requirement). Those sub-handlers may have many responsibilities, but in general we can say
+that they are responsible for both the virtualization-layer DR state replication on the server (they update the MongoDB DR data)
+and application level's notification to the client (like power down events, pet tracking stuff, etc...).
 
-When the Flask server needs to communicate with a DR, it can do so thanks to the
-methods defined at the end of the DoorMQTTHandler class' definition: for example,
+When the Flask server needs to communicate with a DR (i mean, start a communication with a DR, not the other way around),
+it can do so thanks to the methods defined at the end of the DoorMQTTHandler class' definition: for example,
 if we want to set the denial setting for the entry side of a Door DR device, we can use
 the publish_denial_setting() method, without needing to rewrite the code
 everywhere we need to do so.
