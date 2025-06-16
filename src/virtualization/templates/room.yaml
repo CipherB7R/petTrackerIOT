@@ -12,7 +12,7 @@ schemas:  # TODO: delete deprecated data entries
     data:
       vacancy_status: bool # false if pet is inside room, true if pet is outside room
       denial_status: bool # false if feedback mechanism is deactivated for all devices' sides facing the room, true otherwise
-      last_time_accessed: datetime # -1 if room was never accessed
+      last_time_accessed: datetime # None if room was never accessed
       # BOTH DEPRECATED: PORTED BACK TO NET4uCA's MEASUREMENTS FIELD, TO ALLOW USE WITH THEIR ANALYTICS ENGINE... SEE door.yaml.
       #pet_accesses: List[Dict] # dictionary of accesses, elements contain timestamp_of_access and duration
       #denial_statuses: List[Dict] # dictionary of past denial setting, elements contain timestamp_of_setting and duration
