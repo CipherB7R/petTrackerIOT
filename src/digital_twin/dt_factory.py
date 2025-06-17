@@ -1,6 +1,8 @@
 from typing import Dict, List, Optional
 from datetime import datetime
 from bson import ObjectId
+from flask import current_app
+
 from database import Database
 from src.virtualization.digital_replica.schema_registry import SchemaRegistry
 from src.digital_twin.core import DigitalTwin
@@ -58,7 +60,7 @@ class DTFactory:
             dt_collection = self.db_service.db["digital_twins"]
 
             # Verify DR exists
-            dr = self.db_service.get_dr(dr_type, dr_id)
+            dr = current_app.config["DR_FACTORY"].get_dr(dr_type, dr_id)
             if not dr:
                 raise ValueError(f"Digital Replica not found: {dr_id}")
 
@@ -151,21 +153,21 @@ class DTFactory:
         except Exception as e:
             raise Exception(f"Failed to get Digital Twin: {str(e)}")
 
-    # def get_dt_by_name(self, name: str) -> Optional[Dict]:
-    #     """
-    #     Get a Digital Twin by name
-    #
-    #     Args:
-    #         name: Digital Twin name
-    #
-    #     Returns:
-    #         Dict: Digital Twin data if found, None otherwise
-    #     """
-    #     try:
-    #         dt_collection = self.db_service.db["digital_twins"]
-    #         return dt_collection.find_one({"name": name})
-    #     except Exception as e:
-    #         raise Exception(f"Failed to get Digital Twin: {str(e)}")
+    def get_dt_by_name(self, name: str) -> Optional[Dict]:
+        """
+        Get a Digital Twin by name
+
+        Args:
+            name: Digital Twin name
+
+        Returns:
+            Dict: Digital Twin data if found, None otherwise
+        """
+        try:
+            dt_collection = self.db_service.db["digital_twins"]
+            return dt_collection.find_one({"name": name})
+        except Exception as e:
+            raise Exception(f"Failed to get Digital Twin: {str(e)}")
 
     def list_dts(self) -> List[Dict]:
         """
@@ -306,7 +308,7 @@ class DTFactory:
 
             # Add Digital Replicas
             for dr_ref in dt_data.get("digital_replicas", []):
-                dr = self.db_service.get_dr(dr_ref["type"], dr_ref["id"])
+                dr = current_app.config["DR_FACTORY"].get_dr(dr_ref["type"], dr_ref["id"])
                 if dr:
                     dt.add_digital_replica(dr)
                     print(f"Added DR: {dr_ref['type']} - {dr_ref['id']}")
