@@ -1,0 +1,508 @@
+{
+	"info": {
+		"_postman_id": "38685591-393f-4ee7-8041-03e0dad5040d",
+		"name": "Pet-tracker scenario Collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "45809347",
+		"_collection_link": "https://johndoe-5805070.postman.co/workspace/John-Doe's-Workspace~984fae83-eb09-4d76-8ecc-ec6fa5bee752/collection/45809347-38685591-393f-4ee7-8041-03e0dad5040d?action=share&source=collection_link&creator=45809347"
+	},
+	"item": [
+		{
+			"name": "create a room",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"profile\": {\r\n    \"name\": \"Stanza letto matrimoniale\"\r\n  }\r\n\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/rooms",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"rooms"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get room test",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/rooms/acae48f6-dec9-46d4-8664-3486e90baf53",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"rooms",
+						"acae48f6-dec9-46d4-8664-3486e90baf53"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "create door",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"profile\":{\r\n      \"device_name\": \"NodeMCU\", // automatic\r\n      \"seq_number\": 1\r\n  }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/doors",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"doors"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get door test",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/doors/0db00b85-0ff7-402a-9074-aee093e63350",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"doors",
+						"0db00b85-0ff7-402a-9074-aee093e63350"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "createSmartHome",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"profile\":{\r\n      \"address\": \"Via Milano Fiorici, 32\",\r\n      \"pet_name\": \"Puffo\",\r\n      \"user\": \"tabloid17\"\r\n  }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/smart_homes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"smart_homes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get SmartHome test",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/smart_homes/1d4b6c44-4d8c-4649-ae24-d58c4487f72c",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"smart_homes",
+						"1d4b6c44-4d8c-4649-ae24-d58c4487f72c"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get default room test",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/rooms/4b01026a-bf9e-4463-85cd-403580dc3ccc",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"rooms",
+						"4b01026a-bf9e-4463-85cd-403580dc3ccc"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add rooms and devices to smart home Copy",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"data\":{\r\n        \"list_of_rooms\": [\"acae48f6-dec9-46d4-8664-3486e90baf53\"], // this will NOT overwrite the room associations of the device.\r\n        \"list_of_devices\":[\"0db00b85-0ff7-402a-9074-aee093e63350\"]\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/smart_homes/1d4b6c44-4d8c-4649-ae24-d58c4487f72c",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"smart_homes",
+						"1d4b6c44-4d8c-4649-ae24-d58c4487f72c"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get SmartHome test Copy",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/smart_homes/1d4b6c44-4d8c-4649-ae24-d58c4487f72c",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"smart_homes",
+						"1d4b6c44-4d8c-4649-ae24-d58c4487f72c"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get door test check for room reassignment",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/doors/0db00b85-0ff7-402a-9074-aee093e63350",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"doors",
+						"0db00b85-0ff7-402a-9074-aee093e63350"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "change room association of device",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{ //changes only one side though\r\n    \"data\":{\r\n        \"entry_side_room_id\": \"acae48f6-dec9-46d4-8664-3486e90baf53\"\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/doors/0db00b85-0ff7-402a-9074-aee093e63350",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"doors",
+						"0db00b85-0ff7-402a-9074-aee093e63350"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get door test Copy 2",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/doors/0db00b85-0ff7-402a-9074-aee093e63350",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"doors",
+						"0db00b85-0ff7-402a-9074-aee093e63350"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "revert room association to delete it after",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{ //changes only one side though\r\n    \"data\":{\r\n        \"entry_side_room_id\": \"4b01026a-bf9e-4463-85cd-403580dc3ccc\" //somewhere else room id, get it with a GET\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/doors/0db00b85-0ff7-402a-9074-aee093e63350",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"doors",
+						"0db00b85-0ff7-402a-9074-aee093e63350"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "remove rooms and devices from smart home",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"data\":{\r\n        \"list_of_rooms\": [\"4b01026a-bf9e-4463-85cd-403580dc3ccc\"], // this will overwrite the room associations of the device.\r\n        \"list_of_devices\":[]\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/smart_homes/1d4b6c44-4d8c-4649-ae24-d58c4487f72c",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"smart_homes",
+						"1d4b6c44-4d8c-4649-ae24-d58c4487f72c"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete room",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/rooms/47a0c269-5f20-4209-97ea-d360f347941c",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"rooms",
+						"47a0c269-5f20-4209-97ea-d360f347941c"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete door",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/doors/0db00b85-0ff7-402a-9074-aee093e63350",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"doors",
+						"0db00b85-0ff7-402a-9074-aee093e63350"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "deleteSmartHome",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/smart_homes/1d4b6c44-4d8c-4649-ae24-d58c4487f72c",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"smart_homes",
+						"1d4b6c44-4d8c-4649-ae24-d58c4487f72c"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "util - get all doors",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/doors",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"doors"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "util - get all rooms",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/rooms",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"rooms"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "util - get all smart homes",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:88/api/pettracker/smart_homes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "88",
+					"path": [
+						"api",
+						"pettracker",
+						"smart_homes"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
