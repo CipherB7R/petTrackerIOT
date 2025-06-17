@@ -6,12 +6,14 @@ schemas:
       address: str # general information
       pet_name: str # will be used to generate customized telegram messages
       user: str # telegram account unique identificator linked to smart home
+      chat_id: str # telegram chat id to send notifications
     metadata:
       created_at: datetime
       updated_at: datetime
 
   entity:
     data:
+      default_room_id: str # id of the somewhere else default room's DR, for ease of access.
       list_of_rooms: List[str] # list of id of rooms linked to account
       list_of_devices: List[str] # list of id of door DTs (NodeMCU) linked to account
       fault_status: bool # false if no device is faulted (powerstatus == false), true otherwise
@@ -29,6 +31,10 @@ schemas:
         - updated_at
 
     type_constraints:
+      default_room_id:
+        type: str
+      chat_id:
+        type: str
       address:
         type: str
       pet_name:
@@ -46,6 +52,7 @@ schemas:
     initialization:
       profile:
         pet_name: "Pet"
-      fault_status: False
-      list_of_devices: []
-      list_of_rooms: [] # it should come with the "somewhere else" room id by default, but we have no way of specifying it
+      data:
+        fault_status: False
+        list_of_devices: []
+        list_of_rooms: [] # it should come with the "somewhere else" room id by default, but we have no way of specifying it

@@ -65,9 +65,11 @@ schemas:  # TODO: delete deprecated data entries
 
 
     initialization:
-      name: "Random room"
-      vacancy_status: True
-      denial_status: False
-#      pet_accesses: []
-#      denial_statuses: []
-      measurements: []
+      profile:
+        name: "Random room"
+      data:
+        vacancy_status: True
+        denial_status: False
+    #      pet_accesses: []
+    #      denial_statuses: []
+        measurements: []

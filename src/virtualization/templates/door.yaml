@@ -28,7 +28,6 @@ schemas:   # TODO: delete deprecated data entries
         - _id
         - type
       profile:
-        - device_name
         - seq_number
       metadata:
         - created_at
@@ -71,8 +70,10 @@ schemas:   # TODO: delete deprecated data entries
             timestamp: datetime
 
     initialization:
-      device_name: "NodeMCU"
-      power_status: False
-      power_saving_mode_status: True
-      #passing_by_detections: []
-      measurements: []
+      profile:
+        device_name: "NodeMCU"
+      data:
+        power_status: False
+        power_saving_mode_status: True
+        #passing_by_detections: []
+        measurements: []
