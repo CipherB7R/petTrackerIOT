@@ -17,17 +17,17 @@ class DRFactory:
         """Create Pydantic model for profile section"""
 
         mandatory_fields = (
-            self.schema_registry.schemas[dr_type]["schemas"]
+            self.schema_registry.schemas_yaml[dr_type]["schemas"]
             .get("validations", {})
             .get("mandatory_fields", {})
             .get("profile", [])
         )
         type_constraints = (
-            self.schema_registry.schemas[dr_type]["schemas"].get("validations", {}).get("type_constraints", {})
+            self.schema_registry.schemas_yaml[dr_type]["schemas"].get("validations", {}).get("type_constraints", {})
         )
 
         field_definitions = {}
-        profile_fields = self.schema_registry.schemas[dr_type]["schemas"]["common_fields"].get("profile", {})
+        profile_fields = self.schema_registry.schemas_yaml[dr_type]["schemas"]["common_fields"].get("profile", {})
 
         for field_name, field_type in profile_fields.items():
             is_required = field_name in mandatory_fields
@@ -80,9 +80,9 @@ class DRFactory:
     def _create_data_model(self, dr_type: str) -> Type[BaseModel]:
         """Create Pydantic model for data section"""
         type_constraints = (
-            self.schema_registry.schemas[dr_type]["schemas"].get("validations", {}).get("type_constraints", {})
+            self.schema_registry.schemas_yaml[dr_type]["schemas"].get("validations", {}).get("type_constraints", {})
         )
-        data_fields = self.schema_registry.schemas[dr_type]["schemas"].get("entity", {}).get("data", {})
+        data_fields = self.schema_registry.schemas_yaml[dr_type]["schemas"].get("entity", {}).get("data", {})
 
         field_definitions = {}
         for field_name, field_type in data_fields.items():
@@ -191,7 +191,7 @@ class DRFactory:
 
         # Apply initialization defaults
         init_values = (
-            self.schema_registry.schemas[dr_type]["schemas"].get("validations", {}).get("initialization", {})
+            self.schema_registry.schemas_yaml[dr_type]["schemas"].get("validations", {}).get("initialization", {})
         )
         for section, defaults in init_values.items():
             if section == "metadata":
@@ -312,17 +312,39 @@ class DRFactory:
         if not self.db_service.is_connected():
             raise ConnectionError("Not connected to MongoDB")
 
+        # Create Pydantic models for sections
+        ProfileModel = self._create_profile_model(dr_type)
+        DataModel = self._create_data_model(dr_type)
+
         try:
+            # get the original dr...
+            current_dr = self.get_dr(dr_type, dr_id)
+
+            if not current_dr:
+                raise ValueError(f"Digital Replica not found: {dr_id}")
+
             collection_name = self.db_service.schema_registry.get_collection_name(dr_type)
 
-            # Always update metadata.updated_at
-            if "metadata" not in update_data:
-                update_data["metadata"] = {}
-            update_data["metadata"]["updated_at"] = datetime.utcnow()
+            # Validate and apply updates section by section
+            if "profile" in update_data:
+                current_profile = current_dr.get("profile", {})
+                profile = ProfileModel(**(current_profile | update_data["profile"]))
+                current_dr["profile"] = profile.model_dump(exclude_unset=True)
+
+            if "data" in update_data:
+                current_data = current_dr.get("data", {})
+                data = DataModel(**(current_data | update_data["data"]))
+                current_dr["data"] = data.model_dump(exclude_unset=True)
+
+            if "metadata" in update_data:
+                current_dr["metadata"].update(update_data["metadata"])
+
+            # Update timestamp
+            current_dr["metadata"]["updated_at"] = datetime.utcnow()
 
             # Let SchemaRegistry handle validation through MongoDB schema
             result = self.db_service.db[collection_name].update_one(
-                {"_id": dr_id}, {"$set": update_data}
+                {"_id": dr_id}, {"$set": current_dr} # $set will replace every field of the table with _id == dr_id, effectively we are replacing the old table (Every field) with its updated version.
             )
 
             if result.matched_count == 0:

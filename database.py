@@ -30,3 +30,6 @@ class Database:
     def is_connected(self) -> bool:
         return self.client is not None and self.db is not None
 
+    def wipe_test_db(self) -> bool:
+        return self.client.drop_database(self.db_name)
+

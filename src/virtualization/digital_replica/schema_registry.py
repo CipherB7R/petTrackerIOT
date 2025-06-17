@@ -5,6 +5,7 @@ import yaml
 class SchemaRegistry:
     def __init__(self):
         self.schemas = {}
+        self.schemas_yaml = {}
 
     def load_schema(self, schema_type: str, yaml_path: str) -> None:
         """Load schema from YAML file"""
@@ -20,6 +21,7 @@ class SchemaRegistry:
                 raw_schema["schemas"]
             )
             self.schemas[schema_type] = validation_schema
+            self.schemas_yaml[schema_type] = raw_schema # added this since the dr_factory uses the yaml representation.
 
         except Exception as e:
             raise ValueError(f"Failed to load schema from {yaml_path}: {str(e)}")
