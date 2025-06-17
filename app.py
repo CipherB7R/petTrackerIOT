@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 
+from src.application.pettracker_apis import register_pettracker_blueprint
 from src.virtualization.digital_replica.dr_factory import DRFactory
 from src.virtualization.digital_replica.schema_registry import SchemaRegistry
 from database import Database
@@ -11,7 +12,7 @@ from config.config_loader import ConfigLoader
 from src.application.mqtt.mqtt_handler import DoorMQTTHandler
 
 from pyngrok import ngrok
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application
 import asyncio
 import nest_asyncio
 from src.application.telegram.config.settings import (
@@ -20,25 +21,12 @@ from src.application.telegram.config.settings import (
     WEBHOOK_PATH,
     TELEGRAM_BLUE_PRINTS,
 )
-from src.application.telegram.handlers.base_handlers import (
-    start_handler,
-    help_handler,
-    echo_handler,
-)
+from src.application.telegram.handlers.base_handlers import setup_handlers
 from src.application.telegram.routes.webhook_routes import register_webhook, init_routes
 
 nest_asyncio.apply()
 SERVER_PORT = 88
 
-
-def setup_handlers(application):
-    """Setup all the bot command handlers"""
-    # Registra i base handlers
-    application.add_handler(CommandHandler("start", start_handler))
-    application.add_handler(CommandHandler("help", help_handler))
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, echo_handler)
-    )
 
 
 class FlaskServer:
@@ -137,6 +125,7 @@ class FlaskServer:
                 schema_registry=schema_registry,
             )
             db_service.connect()
+            db_service.wipe_test_db()
 
             # Initialize DTFactory
             dt_factory = DTFactory(db_service, schema_registry)
@@ -149,6 +138,7 @@ class FlaskServer:
             self.app.config["DB_SERVICE"] = db_service
             self.app.config["DT_FACTORY"] = dt_factory
             self.app.config["DR_FACTORY"] = dr_factory
+            self.app.config["TELEGRAM_BOT"] = application.bot
 
         except Exception as e:
             print(f"Initialization error: {str(e)}")
@@ -159,6 +149,7 @@ class FlaskServer:
     def _register_blueprints(self):
         """Register all API blueprints"""
         register_api_blueprints(self.app)
+        register_pettracker_blueprint(self.app)
         register_webhook(self.app)  # ----> TELEGRAM
 
     def run(self, host="0.0.0.0", port=SERVER_PORT):
