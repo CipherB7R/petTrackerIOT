@@ -1,8 +1,9 @@
 After having defined the virtualization, AKA "DR consistency and synchronization with the server data" level, we move to the Service level.
 
-The objects in these level are services, which are routines that take as input data and return a result.
+The objects in these level are services, which are routines that take as input some digital replica data, and return a result (be it the number of online DRs among those registered in the DTs, statistics computed on top of DR data, behavioral scores of the pets ETC...).
 
-The BaseService class defines the top of the hierarchy for the services class we may define.
+The BaseService class defines the top of the hierarchy for the services classes we may define.
+
 It tells us a service must always implement the abstract method "execute(self, data: Dict, dr_type: str = None, attribute: str = None)".
 
 In the original version of the NET4uCA framework, the BaseService class didn't impose any restriction on the type or content of data we supply to services (its description tells us it should be just a python's Dictionary),
@@ -42,7 +43,29 @@ its respective Door DR (nodeMCU device)).
 
 # TODO: ADD more services specialized in our door, room and smart_home DTs!
 
+### FindFaultsService (subclass of BaseService)
+This service has been defined by us.
 
+It can be attached to all digital twins that aggregate door-type DRs with a "power_status" data field, and will just return
+the list of offline devices currently associated to the DT 
+(same thing as saying 
+"contained in the digital_replicas field of the DT" 
+or
+"contained in the "digital_replicas" key of the data dict given as input to the service"
+)
+
+### RetrievePetPositionService (subclass of BaseService)
+This service has been defined by us.
+
+It can be attached to all digital twins that aggregate room-type DRs with a "vacancy_status" data field, and will just return
+the single room which is occupied by a pet (vacancy_status == False). 
+
+Oh, it throws an exception at you if there is more than a room whose vacancy_status equals to false, cause this app
+is made to track just 1 pet, and so a pet can only be in max 1 room at a time.
+
+
+
+    
 
 
 # A OOP convention violation...
