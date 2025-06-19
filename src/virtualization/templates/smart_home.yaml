@@ -17,6 +17,7 @@ schemas:
       list_of_rooms: List[str] # list of id of rooms linked to account
       list_of_devices: List[str] # list of id of door DTs (NodeMCU) linked to account
       fault_status: bool # false if no device is faulted (powerstatus == false), true otherwise
+      power_saving_status: bool # true if all device are put into power saving mode by user setting
 
   validations:
     mandatory_fields:
@@ -47,12 +48,15 @@ schemas:
         type: List[str]
       fault_status:
         type: bool
+      power_saving_status:
+        type: bool
 
 
     initialization:
       profile:
         pet_name: "Pet"
       data:
-        fault_status: False
+        power_saving_status: False
+        fault_status: True # Without any devices, the fault status is always true. When the first gets added, if it is active the fault status will clear out.
         list_of_devices: []
         list_of_rooms: [] # it should come with the "somewhere else" room id by default, but we have no way of specifying it
