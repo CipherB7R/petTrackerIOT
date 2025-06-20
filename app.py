@@ -28,11 +28,13 @@ nest_asyncio.apply()
 SERVER_PORT = 88
 
 
-
 class FlaskServer:
     def __init__(self):
         self.app = Flask(__name__)
         CORS(self.app)
+
+        # Initialize MQTT config
+
         self._init_components()
         self._register_blueprints()
 
@@ -40,13 +42,6 @@ class FlaskServer:
         self.ngrok_tunnel = None
         self.app.config["USE_RELOADER"] = False
 
-        # Initialize MQTT config
-        self.app.config["MQTT_CONFIG"] = {
-            "broker": "127.0.0.1", # i installed Oracle's mosquitto broker on the local machine
-            "port": 1883,
-        }
-        # Initialize MQTT handler
-        self.mqtt_handler = DoorMQTTHandler(self.app)
 
     def _init_components(self):
         """Initialize all required components and store them in app config"""
@@ -99,6 +94,8 @@ class FlaskServer:
             print(f"Webhook URL: {webhook_url}")
             ####################################################
 
+
+
             # Now that we have a public reachable URL, which will relay to our port 88 all the HTTP requests,
             # we need to...
             # TELEGRAM INITIALIZATION########################
@@ -125,7 +122,14 @@ class FlaskServer:
                 schema_registry=schema_registry,
             )
             db_service.connect()
-            db_service.wipe_test_db()
+            #db_service.wipe_test_db()
+
+            self.app.config["MQTT_CONFIG"] = {
+                "broker": "127.0.0.1",  # i installed Oracle's mosquitto broker on the local machine
+                "port": 1883,
+            }
+            # Initialize MQTT handler
+            self.mqtt_handler = DoorMQTTHandler(self.app)
 
             # Initialize DTFactory
             dt_factory = DTFactory(db_service, schema_registry)
@@ -139,6 +143,7 @@ class FlaskServer:
             self.app.config["DT_FACTORY"] = dt_factory
             self.app.config["DR_FACTORY"] = dr_factory
             self.app.config["TELEGRAM_BOT"] = application.bot
+            self.app.config["MQTT_HANDLER"] = self.mqtt_handler
 
         except Exception as e:
             print(f"Initialization error: {str(e)}")

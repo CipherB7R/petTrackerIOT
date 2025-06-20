@@ -14,7 +14,7 @@ schemas:
   entity:
     data:
       default_room_id: str # id of the somewhere else default room's DR, for ease of access.
-      list_of_rooms: List[str] # list of id of rooms linked to account
+      list_of_rooms: List[str] # list of id of rooms linked to account # max 20, 21 if you count in the defaul room.
       list_of_devices: List[str] # list of id of door DTs (NodeMCU) linked to account
       fault_status: bool # false if no device is faulted (powerstatus == false), true otherwise
       power_saving_status: bool # true if all device are put into power saving mode by user setting

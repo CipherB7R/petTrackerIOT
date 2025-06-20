@@ -1,14 +1,22 @@
 from datetime import datetime
+from turtledemo.penrose import start
 from typing import Optional
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, \
+    ReplyKeyboardRemove
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, Application, CallbackQueryHandler, \
     ConversationHandler
 from flask import \
     current_app  # we need this to access the dr factories, we registered them under app.config dictionary.
 
-from src.application.mqtt.mqtt_handler import get_smart_home_dt_and_dr_from_customer_username
+from src.application.mqtt.mqtt_handler import get_smart_home_dt_and_dr_from_customer_username, \
+    calculateSecondsOfDifference
 from src.digital_twin.core import DigitalTwin
+
+MAX_PERSONAL_ROOMS_PER_USER = 20
+MAX_CHARACTERS_ROOM_NAME = 128
+
+room_selection_states_list = list(range(0, MAX_PERSONAL_ROOMS_PER_USER))
 
 
 def setup_handlers(application: Application):
@@ -26,12 +34,6 @@ def setup_handlers(application: Application):
         ConversationHandler(
             entry_points=[CommandHandler("powersaving", powersaving_handler)],
             states={
-                #     START_ROUTES: [
-                #         CallbackQueryHandler(one, pattern="^" + str(ONE) + "$"),
-                #         CallbackQueryHandler(two, pattern="^" + str(TWO) + "$"),
-                #         CallbackQueryHandler(three, pattern="^" + str(THREE) + "$"),
-                #         CallbackQueryHandler(four, pattern="^" + str(FOUR) + "$"),
-                #     ],
                 "END_ROUTES": [
                     CallbackQueryHandler(powersaving_handler_yes, pattern="^Yes$"),
                     CallbackQueryHandler(powersaving_handler_no, pattern="^No$"),
@@ -39,10 +41,43 @@ def setup_handlers(application: Application):
             },
             fallbacks=[MessageHandler(filters.TEXT & ~filters.COMMAND, echo_handler),
                        CommandHandler("start", start_handler)],
-            #per_message=True
+            # per_message=True
         )
     )
-
+    room_denial_change_state_handlers = {
+        str(k): v for k, v in zip(
+            room_selection_states_list,
+            [
+                [
+                    MessageHandler(filters.Regex(r"^<$"),
+                                   room_denial_statuses_change__room_selected_handler__builder(index, "<")),
+                    MessageHandler(filters.Regex(r"^>$"),
+                                   room_denial_statuses_change__room_selected_handler__builder(index, ">")),
+                    MessageHandler(filters.Regex(r"^New room$"),
+                                   room_denial_statuses_change__room_selected_handler__builder(index, "new_room")),
+                    MessageHandler(filters.Regex(r"^[a-zA-Z0-9\s]{1,128}$"),
+                                   room_denial_statuses_change__room_selected_handler__builder(index))
+                ]
+                for index in room_selection_states_list
+            ]
+        )
+    }
+    print(room_denial_change_state_handlers)
+    application.add_handler(
+        ConversationHandler(
+            entry_points=[CommandHandler("room_denial_statuses_change", room_denial_statuses_change_handler)],
+            states=room_denial_change_state_handlers
+                   |
+                   {
+                       "NEW_ROOM": [MessageHandler(filters.Regex(r"^[a-zA-z0-9\s]{1,128}$"), new_room_handler)],
+                   },
+            fallbacks=[
+                CommandHandler("start", conversation_start_handler),
+                        MessageHandler(filters.ALL, conversation_echo_handler)
+                        ],
+            # per_message=True
+        )
+    )
 
     application.add_handler(
         # ~ means not, so the message sent by the telegram user must not contain
@@ -152,6 +187,27 @@ async def echo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def conversation_help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await help_handler(update, context)
+
+    return ConversationHandler.END
+
+
+async def conversation_echo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Prompt closed.\n\n"
+        " Please, click on the keyboard or enter a correct input next time (only plaintext, numbers and spaces please!)"
+    )
+
+    return ConversationHandler.END
+
+
+async def conversation_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await start_handler(update, context)
+
+    return ConversationHandler.END
+
+
 async def room_denial_statutes_retrieval_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dt_id, smart_home_dt, smart_home_dr = None, None, None
     try:
@@ -161,7 +217,6 @@ async def room_denial_statutes_retrieval_handler(update: Update, context: Contex
             dt_id, smart_home_dt, smart_home_dr = result
             smart_home_dt: DigitalTwin = smart_home_dt
             final_message = "Here is the room denial status for all rooms:\n ⛔: denied room; 🟢: accessible room\n\n"
-
 
             # take each room DR in the smart_home_dt
             for dr in smart_home_dt.digital_replicas:
@@ -195,7 +250,7 @@ async def room_vacancy_statutes_retrieval_handler(update: Update, context: Conte
             # take each room DR in the smart_home_dt
             for dr in smart_home_dt.digital_replicas:
                 if dr["type"] == "room":
-                    final_message += f'{"🔴" if dr["data"]["vacancy_status"] else "⚪"} {dr["profile"]["name"]}\n'
+                    final_message += f'{"🔴" if not dr["data"]["vacancy_status"] else "⚪"} {dr["profile"]["name"]}\n'
 
             await update.message.reply_text(
                 final_message
@@ -293,19 +348,26 @@ async def powersaving_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             dt_id, smart_home_dt, smart_home_dr = result
             smart_home_dt: DigitalTwin = smart_home_dt
 
-            keyboard = [[
-                InlineKeyboardButton("Yes", callback_data="Yes"),
-                InlineKeyboardButton("No", callback_data="No"),
-            ]]
+            devices_to_control = list(filter(lambda dr: dr["type"] == "door", smart_home_dt.digital_replicas))
+            if len(devices_to_control) == 0:
+                await update.message.reply_text(
+                    text=f'No devices to control. Want to buy some? Call 123-456-7890')
+                return ConversationHandler.END
+            else:
 
-            reply_markup = InlineKeyboardMarkup(keyboard)
+                keyboard = [[
+                    InlineKeyboardButton("Yes", callback_data="Yes"),
+                    InlineKeyboardButton("No", callback_data="No"),
+                ]]
 
-            await update.message.reply_text(
-                f'The power saving mode is currently {"ACTIVE" if smart_home_dr["data"]["power_saving_status"] else "INACTIVE"}.\n Do you wish to {"activate" if smart_home_dr["data"]["power_saving_status"] else "deactivate"} it?',
-                reply_markup=reply_markup
-            )
+                reply_markup = InlineKeyboardMarkup(keyboard)
 
-            return "END_ROUTES"
+                await update.message.reply_text(
+                    f'The power saving mode is currently {"ACTIVE" if smart_home_dr["data"]["power_saving_status"] else "INACTIVE"}.\n Do you wish to {"activate" if smart_home_dr["data"]["power_saving_status"] else "deactivate"} it?',
+                    reply_markup=reply_markup
+                )
+
+                return "END_ROUTES"
 
         else:
             await update.message.reply_text(
@@ -333,7 +395,6 @@ async def powersaving_handler_yes(update: Update, context: ContextTypes.DEFAULT_
             query = update.callback_query
             await query.answer()
 
-
             smart_home_dr["data"]["power_saving_status"] = not smart_home_dr["data"]["power_saving_status"]
 
             current_app.config['DR_FACTORY'].update_dr(
@@ -341,16 +402,53 @@ async def powersaving_handler_yes(update: Update, context: ContextTypes.DEFAULT_
                 smart_home_dr["_id"],
                 {
                     "data": {
-                        "power_saving_status": smart_home_dr["data"]["power_saving_status"]  # updates the power saving mode status
+                        "power_saving_status": smart_home_dr["data"]["power_saving_status"]
+                        # updates the power saving mode status
                     }
                 }
             )
 
+            # now we activate or deactivate devices, according to new power saving status... as per figure 1.14
+            if smart_home_dr["data"]["power_saving_status"]:
+                # we need to activate the devices that do not have the same room associations on both sides (we need to leave those inactive)...
+                changed_count = current_app.config['MQTT_HANDLER']._wake_up_devices_with_different_room_assignments(
+                    smart_home_dt, smart_home_dr)
+
+                if changed_count == 0:
+                    await query.edit_message_text(
+                        text=f'Power saving mode has been {"activated" if smart_home_dr["data"]["power_saving_status"] else "deactivated"}.\nUnfortunately, zero devices have answered the call.\n Check any stagnant room association: any device whose sides are associated to a same room?')
+                else:
+                    await query.edit_message_text(
+                        text=f'Power saving mode has been {"activated" if smart_home_dr["data"]["power_saving_status"] else "deactivated"}.\nPower saving mode has been changed in {changed_count} devices.\n Please, provide the current pet position, if it is not in the somewhere else default room.')
+
+            else:
+                # we need to deactivate the devices that do not have the same room associations on both sides (those are already inactive)...
+                changed_count = current_app.config['MQTT_HANDLER']._put_to_sleep_online_devices(
+                    smart_home_dt, smart_home_dr)
+                if changed_count == 0:
+                    await query.edit_message_text(
+                        text=f'Power saving mode has been {"activated" if smart_home_dr["data"]["power_saving_status"] else "deactivated"}.\nUnfortunately, zero devices have answered the call.\n Check any stagnant room association: any device whose sides are associated to a same room?')
+                else:
+                    await query.edit_message_text(
+                        text=f'Power saving mode has been {"activated" if smart_home_dr["data"]["power_saving_status"] else "deactivated"}.\nPower saving mode has been changed in {changed_count} devices.\n Please, provide the current pet position, if it is not in the somewhere else default room.')
+
+                # put the pet in the somewhere else room...
+                real_exited_room_id = smart_home_dt.execute_service(
+                    "RetrievePetPositionService")  # this variable contains the exited' room according to the internal status of the pet tracking app...
+
+                if not real_exited_room_id:
+                    current_app.logger.error("No room was occupied before this other room! Impossible.")
+                    raise Exception("No room was occupied before this other room! Impossible.")
+
+                now = datetime.utcnow()
+
+                # and toggle the room vacancy status for that room... this will update statistics too...
+                current_app.config['MQTT_HANDLER']._update_vacancy_status(now, real_exited_room_id, True)
+                current_app.config['MQTT_HANDLER']._update_vacancy_status(now, smart_home_dr["data"]["default_room_id"],
+                                                                          False)
+
             current_app.logger.info(
                 f'Smart home {smart_home_dr["_id"]} power saving mode setting updated to {smart_home_dr["data"]["power_saving_status"]}')
-
-            await query.edit_message_text(
-                text=f'Power saving mode has been {"activated" if smart_home_dr["data"]["power_saving_status"] else "deactivated"}.')
 
 
         else:
@@ -378,9 +476,415 @@ async def powersaving_handler_no(update: Update, context: ContextTypes.DEFAULT_T
             query = update.callback_query
             await query.answer()
 
-
             await query.edit_message_text(
                 text=f"Ok, i won't do nothing")
+
+        else:
+            await update.message.reply_text(
+                "You are not a registered user.\n"
+                "If you have already bought our product, please, contact support at 123-456-7890", reply_markup=None
+            )
+    except Exception as e:
+        current_app.logger.error(e)
+    finally:
+        if dt_id:
+            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        return ConversationHandler.END
+
+
+async def room_denial_statuses_change_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dt_id, smart_home_dt, smart_home_dr = None, None, None
+    try:
+        result = _check_if_registered_through_telegramUpdate(update)
+
+        if result:
+            dt_id, smart_home_dt, smart_home_dr = result
+            smart_home_dt: DigitalTwin = smart_home_dt
+
+            # do not include the default room in this list, we can't change its denial state.
+            rooms_associated_to_user = list(filter(lambda room: room["_id"] != smart_home_dr["data"]["default_room_id"],
+                                                   filter(lambda dr: dr["type"] == "room",
+                                                          smart_home_dt.digital_replicas)))
+
+            if len(rooms_associated_to_user) == 0:
+                await update.message.reply_text(
+                    text=f'You have no rooms whose denial status can be changed.\nIf you want, you can add one through the /room_association_change command.')
+                return ConversationHandler.END
+            else:
+                # ok, we are in the room_denial_statuses_change handler and we know we can retrieve a list of rooms
+                # (without the default "somewhere else"). We are inside a conversational handler which has the
+                # same number of states as max personal rooms for a user. We can just make the user able to scroll
+                # the rooms with the < and > buttons! < takes us to the precedent room, > takes us to the next room!
+                # to aid the reader, let's keep this information inside this object...
+                #current_conversation_state = {
+                #    "rooms_associated_to_user": rooms_associated_to_user,
+                #"current_index": 0 # set by the current state.
+                #}
+
+                keyboard = [
+                    [
+                        KeyboardButton("<"),
+                        KeyboardButton(rooms_associated_to_user[0]["profile"]["name"]),
+                        KeyboardButton(">"),
+                    ],
+                    [
+                        KeyboardButton("New room"),
+                    ]
+                ]
+
+                reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+                await update.message.reply_text(
+                    f'Please, choose a room from the menu, to change its denial status...',
+                    reply_markup=reply_markup,
+                )
+
+                return "0"  # move to the first handler.
+
+        else:
+            await update.message.reply_text(
+                "You are not a registered user.\n"
+                "If you have already bought our product, please, contact support at 123-456-7890"
+            )
+            return ConversationHandler.END
+    except Exception as e:
+        current_app.logger.error(e)
+        return ConversationHandler.END
+    finally:
+        if dt_id:
+            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+
+def room_denial_statuses_change__room_selected_handler__builder(room_index: int, action: str = "room_chosen"):
+    """creates a callbackQueryHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) which can handle the
+    state 'room_index', which corresponds to the state in which we received a message that was built using a
+     replyKeyboardMarkup that was showing the room at position room_index of the list_of_rooms field of the smart_home DR."""
+
+    # To better explain it, let's see a real use example:
+    # "ok, seems like we received a message in this conversation. It came from a replykeyboardmarkup which
+    # was showing the "current_index" room."
+    # "let's check the message content..." (this is done by the ConversationalHandler's pattern matcher)
+
+    # is it a < ? we need to go back in the menu. >>>>> coroutine__go_back()
+    # is it a > ? we need to go forward in the menu. >>>>> coroutine__go_forward()
+    # is it a new_room ? we need to go to the "new_room" state (next message will be the name of the new room) >>>>> coroutine__new_room()
+    # is it anything else? Seems like the user clicked the room name of the previous keyboard! (if it didn't, and sent a random message, bad for him, this is the default course of action) >>>>> coroutine__room_selected()
+
+    def coroutine_base(routine_if_checks_are_good):
+        """
+        builds a routine starting from the coroutine that checks if the user is registered and if
+        it has rooms... accepts as input the routine that will execute if the checks pass.
+        """
+
+        async def coroutine_full(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            dt_id, smart_home_dt, smart_home_dr = None, None, None
+            current_index = room_index
+            try:
+                result = _check_if_registered_through_telegramUpdate(update)
+
+                if result:
+                    dt_id, smart_home_dt, smart_home_dr = result
+                    smart_home_dt: DigitalTwin = smart_home_dt
+
+                    # do not include the default room in this list, we can't change its denial state.
+                    rooms_associated_to_user = list(
+                        filter(lambda room: room["_id"] != smart_home_dr["data"]["default_room_id"],
+                               filter(lambda dr: dr["type"] == "room",
+                                      smart_home_dt.digital_replicas)))
+
+                    if len(rooms_associated_to_user) == 0:
+                        await update.message.reply_text(
+                            text=f'You have no rooms whose denial status can be changed.\nIf you want, you can add one through the /room_association_change command.')
+                        return ConversationHandler.END
+                    else:
+
+                        return await routine_if_checks_are_good(update, context, smart_home_dt, smart_home_dr,
+                                                                current_index,
+                                                                rooms_associated_to_user)
+
+                else:
+                    await update.message.reply_text(
+                        "You are not a registered user.\n"
+                        "If you have already bought our product, please, contact support at 123-456-7890"
+                    )
+                    return ConversationHandler.END
+            except Exception as e:
+                current_app.logger.error(e)
+                return ConversationHandler.END
+            finally:
+                if dt_id:
+                    current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+        return coroutine_full
+
+    async def go_forward(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                         current_index, rooms_associated_to_user):
+        # can we go forward?
+        next_index = current_index + 1
+        if next_index < MAX_PERSONAL_ROOMS_PER_USER:
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[next_index]["profile"]["name"] if next_index < len(
+                        rooms_associated_to_user) else "undefined"),
+                    KeyboardButton(">"),
+                ],
+                [
+                    KeyboardButton("New room"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'Ok, next room!',
+                reply_markup=reply_markup,
+            )
+
+            print(str(next_index))
+            return str(next_index)
+        else:
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[current_index]["profile"]["name"] if current_index < len(
+                        rooms_associated_to_user) else "undefined"),
+                    KeyboardButton(">"),
+                ],
+                [
+                    KeyboardButton("New room"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'No more rooms on this side!',
+                reply_markup=reply_markup,
+            )
+
+            print(str(current_index))
+            return str(current_index)
+
+    async def go_back(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                      current_index, rooms_associated_to_user):
+        # can we go backwards?
+        next_index = current_index - 1
+        if next_index >= 0:
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[next_index]["profile"]["name"] if next_index < len(
+                        rooms_associated_to_user) else "undefined"),
+                    KeyboardButton(">"),
+                ],
+                [
+                    KeyboardButton("New room"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'Ok, previous room!',
+                reply_markup=reply_markup,
+            )
+
+            print(str(next_index))
+            return str(next_index)
+        else:
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[current_index]["profile"]["name"] if current_index < len(
+                        rooms_associated_to_user) else "undefined"),
+                    KeyboardButton(">"),
+                ],
+                [
+                    KeyboardButton("New room"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'No more rooms on this side!',
+                reply_markup=reply_markup,
+            )
+
+            print(str(current_index))
+            return str(current_index)
+
+    async def new_room(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                       current_index, rooms_associated_to_user):
+        # can we go backwards?
+
+        reply_markup = ReplyKeyboardRemove()
+
+        await update.message.reply_text(
+            f'Enter the new room name:',
+            reply_markup=reply_markup,
+        )
+
+        return "NEW_ROOM"
+
+    async def room_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                          current_index, rooms_associated_to_user):
+
+        # check that the current_index is inside the rooms associated to the user...
+        if current_index < len(rooms_associated_to_user):
+            # a room was chosen. Get the current index and get the room_id.
+            chosen_room = rooms_associated_to_user[current_index]
+            if chosen_room["profile"]["name"] == update.message.text:
+
+                # change the denial setting for that room.
+                chosen_room["data"]["denial_status"] = not chosen_room["data"]["denial_status"]
+
+                #update it in the database too...
+
+                # reapply denial statuses for all devices...
+                current_app.config["MQTT_HANDLER"]._reapply_denial_statuses(smart_home_dt, smart_home_dr)
+
+                # add a new measurement to the chosen room dr: new denial setting
+                # get the latest setting change timestamp... if there is no measurements, let the creation time be it.
+                time_since_last_denial_setting = max(chosen_room["data"]["measurements"], key=lambda k: k["timestamp"])["timestamp"] if len(chosen_room["data"]["measurements"]) > 0 else chosen_room["metadata"]["created_at"]# get the latest setting change timestamp... if there isn't, get the creation time of the DR
+
+                print(time_since_last_denial_setting)
+                print(datetime.utcnow())
+                print(calculateSecondsOfDifference(time_since_last_denial_setting, datetime.utcnow()))
+                measurement = {
+                    "type": "denial_status_change",
+                    "value": calculateSecondsOfDifference(time_since_last_denial_setting, datetime.utcnow()),
+                    # just a null value in case the room was never accessed before
+                    "timestamp": datetime.utcnow()
+                }
+
+                # Update measurements
+                if 'data' not in chosen_room:
+                    chosen_room['data'] = {}
+                if 'measurements' not in chosen_room['data']:
+                    chosen_room['data']['measurements'] = []
+
+                chosen_room['data']['measurements'].append(measurement)
+
+                # Update room in database
+                current_app.config['DR_FACTORY'].update_dr(
+                    "room",
+                    chosen_room["_id"],
+                    {
+                        "data": {
+                            "denial_status": chosen_room["data"]["denial_status"],
+                            "measurements": chosen_room['data']['measurements']  # updates the measurements list
+                        }
+                    }
+                )
+                current_app.logger.info(
+                    f"Room {chosen_room['_id']} measurements updated ")
+
+                await update.message.reply_text(
+                    f'Updated room {chosen_room["profile"]["name"]} denial status to {chosen_room["data"]["denial_status"]}.', reply_markup=ReplyKeyboardRemove()
+                )
+                current_app.logger.info(
+                    f'Updated room {chosen_room["_id"]} denial status to {chosen_room["data"]["denial_status"]}')
+            else:
+                await update.message.reply_text(
+                    f'Prompt closed.',
+                    reply_markup=ReplyKeyboardRemove()
+                )
+
+            # end the conversation.
+            return ConversationHandler.END
+
+        else:
+            # keyboard = [
+            #     [
+            #         KeyboardButton("<"),
+            #         KeyboardButton(rooms_associated_to_user[current_index]["profile"]["name"] if current_index < len(
+            #             rooms_associated_to_user) else "undefined"),
+            #         KeyboardButton(">"),
+            #     ],
+            #     [
+            #         KeyboardButton("New room"),
+            #     ]
+            # ]
+            # reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+
+            await update.message.reply_text(
+                f'The selected room is not a valid room.', reply_markup=ReplyKeyboardRemove()
+            )
+
+            return ConversationHandler.END
+
+    if action == ">":
+        return coroutine_base(go_forward)
+    elif action == "<":
+        return coroutine_base(go_back)
+    elif action == "new_room":
+        return coroutine_base(new_room)
+
+    # returns the room_chosen variant by default.
+    return coroutine_base(room_chosen)
+
+
+async def new_room_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dt_id, smart_home_dt, smart_home_dr = None, None, None
+    try:
+        result = _check_if_registered_through_telegramUpdate(update)
+
+        if result:
+            dt_id, smart_home_dt, smart_home_dr = result
+            smart_home_dt: DigitalTwin = smart_home_dt
+
+            if "list_of_rooms" in smart_home_dr["data"]:
+                # max 20 user-defined rooms..
+                if 1 + len(smart_home_dr["data"]["list_of_rooms"]) <= MAX_PERSONAL_ROOMS_PER_USER + 1:
+
+                    # get the message content: it will be the new room's name
+
+                    dr_factory = current_app.config['DR_FACTORY']
+                    # create the new room DR
+                    room = dr_factory.create_dr('room',
+                                                {
+                                                    "profile": {
+                                                        "name": update.message.text[0:128]
+                                                    }
+
+                                                })
+
+                    smart_home_dr["data"]["list_of_rooms"].extend([room["_id"]])
+
+                    # add the room DR to the smart home DR (append)
+                    current_app.config['DR_FACTORY'].update_dr(
+                        "smart_home",
+                        smart_home_dr["_id"],
+                        {
+                            "data": {
+                                "list_of_rooms": smart_home_dr["data"]["list_of_rooms"]
+                                # updates the power saving mode status
+                            }
+                        }
+                    )
+
+                    await update.message.reply_text(
+                        f'Added new room to your house: {room["profile"]["name"]}', reply_markup=ReplyKeyboardRemove()
+                    )
+                    current_app.logger.info(
+                        f'Added new room {room["_id"]} to smart home {smart_home_dr["_id"]}.')
+
+
+                else:  # todo: a place to add MACROs inside templates would be nice... Maybe it's better to add a validation field for list length...
+                    await update.message.reply_text(
+                        "You can't add any more rooms to your account!"
+                    )
+                    return ConversationHandler.END
+
+
+
+
 
         else:
             await update.message.reply_text(
