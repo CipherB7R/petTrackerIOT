@@ -81,6 +81,10 @@ class DTFactory:
         """
         return {
             "AggregationService": "src.services.analytics",
+            "FaultRecoveryService": "src.services.pettracker_services",
+            "RetrievePetPositionService": "src.services.pettracker_services",
+            "FindFaultsService": "src.services.pettracker_services",
+            "RoomAnalyticsService": "src.services.pettracker_services"
         }
 
     def add_service(
@@ -209,22 +213,22 @@ class DTFactory:
     #     except Exception as e:
     #         raise Exception(f"Failed to update Digital Twin: {str(e)}")
 
-    # def delete_dt(self, dt_id: str) -> None:
-    #     """
-    #     Delete a Digital Twin
-    #
-    #     Args:
-    #         dt_id: Digital Twin ID
-    #     """
-    #     try:
-    #         dt_collection = self.db_service.db["digital_twins"]
-    #         result = dt_collection.delete_one({"_id": dt_id})
-    #
-    #         if result.deleted_count == 0:
-    #             raise ValueError(f"Digital Twin not found: {dt_id}")
-    #
-    #     except Exception as e:
-    #         raise Exception(f"Failed to delete Digital Twin: {str(e)}")
+    def delete_dt(self, dt_id: str) -> None:
+        """
+        Delete a Digital Twin
+
+        Args:
+            dt_id: Digital Twin ID
+        """
+        try:
+            dt_collection = self.db_service.db["digital_twins"]
+            result = dt_collection.delete_one({"_id": dt_id})
+
+            if result.deleted_count == 0:
+                raise ValueError(f"Digital Twin not found: {dt_id}")
+
+        except Exception as e:
+            raise Exception(f"Failed to delete Digital Twin: {str(e)}")
 
     # def remove_digital_replica(self, dt_id: str, dr_id: str) -> None:
     #     """
