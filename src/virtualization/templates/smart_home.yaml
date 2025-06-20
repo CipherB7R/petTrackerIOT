@@ -6,7 +6,7 @@ schemas:
       address: str # general information
       pet_name: str # will be used to generate customized telegram messages
       user: str # telegram account unique identificator linked to smart home
-      chat_id: str # telegram chat id to send notifications
+      chat_id: int # telegram chat id to send notifications
     metadata:
       created_at: datetime
       updated_at: datetime
@@ -35,7 +35,7 @@ schemas:
       default_room_id:
         type: str
       chat_id:
-        type: str
+        type: int
       address:
         type: str
       pet_name:
