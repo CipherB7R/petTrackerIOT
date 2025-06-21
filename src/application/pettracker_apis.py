@@ -1,5 +1,9 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
+
+
+MAX_PERSONAL_ROOMS_PER_USER = 20
+MAX_CHARACTERS_ROOM_NAME = 128
 from src.virtualization.digital_replica.dr_factory import DRFactory
 from bson import ObjectId
 
@@ -460,7 +464,11 @@ def update_smart_home(smart_home_id): # THIS ONE IS NOT IDEMPOTENT, WE CAN'T USE
 
             if "list_of_rooms" in data["data"]:
                 if "list_of_rooms" in current_dr["data"]:
-                    update_data["data"]["list_of_rooms"].extend(current_dr["data"]["list_of_rooms"])
+                    # max 20 user-defined rooms..
+                    if len(update_data["data"]["list_of_rooms"]) + len(current_dr["data"]["list_of_rooms"]) <= MAX_PERSONAL_ROOMS_PER_USER + 1:
+                        update_data["data"]["list_of_rooms"].extend(current_dr["data"]["list_of_rooms"])
+                    else: # todo: a place to add MACROs inside templates would be nice... Maybe it's better to add a validation field for list length...
+                        return jsonify({"error": "You can't add more than 20 personal rooms!!!!!"}), 500
 
 
             if "list_of_devices" in data["data"]:
