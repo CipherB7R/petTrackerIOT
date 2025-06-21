@@ -75,8 +75,8 @@ def setup_handlers(application: Application):
                    },
             fallbacks=[
                 CommandHandler("start", conversation_start_handler),
-                        MessageHandler(filters.ALL, conversation_echo_handler)
-                        ],
+                MessageHandler(filters.ALL, conversation_echo_handler)
+            ],
             # per_message=True
         )
     )
@@ -105,6 +105,48 @@ def setup_handlers(application: Application):
         ConversationHandler(
             entry_points=[CommandHandler("change_pet_position", change_pet_position_handler)],
             states=change_pet_position_handlers,
+            fallbacks=[
+                CommandHandler("start", conversation_start_handler),
+                MessageHandler(filters.ALL, conversation_echo_handler)
+            ],
+            # per_message=True
+        )
+    )
+
+    # room association change (device room association) handlers...
+    application.add_handler(
+        ConversationHandler(
+            entry_points=[CommandHandler("room_association_change", room_association_change_handler)],
+            states={
+                       "ROOM_SELECTION": [
+                           MessageHandler(filters.Regex(r"^<$"),
+                                          room_association_change__room_selected_handler__builder("<")),
+                           MessageHandler(filters.Regex(r"^>$"),
+                                          room_association_change__room_selected_handler__builder(">")),
+                           MessageHandler(filters.Regex(r"^New room$"),
+                                          room_association_change__room_selected_handler__builder("new_room")),
+                           MessageHandler(filters.Regex(r"^[a-zA-Z0-9\s]{1,128}$"),
+                                          room_association_change__room_selected_handler__builder())
+                       ],
+                       "DOOR_SELECTION": [
+                           MessageHandler(filters.Regex(r"^<$"),
+                                          room_association_change__door_selected_handler__builder("<")),
+                           MessageHandler(filters.Regex(r"^>$"),
+                                          room_association_change__door_selected_handler__builder(">")),
+                           MessageHandler(filters.Regex(r"^New room$"),
+                                          room_association_change__door_selected_handler__builder("new_room")),
+                           MessageHandler(filters.Regex(r"^[a-zA-Z0-9@]{1,128}$"),
+                                          room_association_change__door_selected_handler__builder())
+                       ]
+                   }
+                   |
+                   {
+                       "NEW_ROOM": [MessageHandler(filters.Regex(r"^[a-zA-z0-9\s]{1,128}$"), room_association_change__new_room_handler)],
+                       "SIDE_SELECTION": [  # END ROUTES
+                           MessageHandler(filters.Regex("^Entry side$"), room_association_change_handler_entry),
+                           MessageHandler(filters.Regex("^Exit side$"), room_association_change_handler_exit),
+                       ]
+                   },
             fallbacks=[
                 CommandHandler("start", conversation_start_handler),
                 MessageHandler(filters.ALL, conversation_echo_handler)
@@ -795,7 +837,9 @@ def room_denial_statuses_change__room_selected_handler__builder(room_index: int,
 
                 # add a new measurement to the chosen room dr: new denial setting
                 # get the latest setting change timestamp... if there is no measurements, let the creation time be it.
-                time_since_last_denial_setting = max(chosen_room["data"]["measurements"], key=lambda k: k["timestamp"])["timestamp"] if len(chosen_room["data"]["measurements"]) > 0 else chosen_room["metadata"]["created_at"]# get the latest setting change timestamp... if there isn't, get the creation time of the DR
+                time_since_last_denial_setting = max(chosen_room["data"]["measurements"], key=lambda k: k["timestamp"])[
+                    "timestamp"] if len(chosen_room["data"]["measurements"]) > 0 else chosen_room["metadata"][
+                    "created_at"]  # get the latest setting change timestamp... if there isn't, get the creation time of the DR
 
                 print(time_since_last_denial_setting)
                 print(datetime.utcnow())
@@ -830,7 +874,8 @@ def room_denial_statuses_change__room_selected_handler__builder(room_index: int,
                     f"Room {chosen_room['_id']} measurements updated ")
 
                 await update.message.reply_text(
-                    f'Updated room {chosen_room["profile"]["name"]} denial status to {chosen_room["data"]["denial_status"]}.', reply_markup=ReplyKeyboardRemove()
+                    f'Updated room {chosen_room["profile"]["name"]} denial status to {chosen_room["data"]["denial_status"]}.',
+                    reply_markup=ReplyKeyboardRemove()
                 )
                 current_app.logger.info(
                     f'Updated room {chosen_room["_id"]} denial status to {chosen_room["data"]["denial_status"]}')
@@ -856,7 +901,6 @@ def room_denial_statuses_change__room_selected_handler__builder(room_index: int,
             #     ]
             # ]
             # reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
-
 
             await update.message.reply_text(
                 f'The selected room is not a valid room.', reply_markup=ReplyKeyboardRemove()
@@ -944,8 +988,6 @@ async def new_room_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
 
-
-
 async def change_pet_position_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dt_id, smart_home_dt, smart_home_dr = None, None, None
     try:
@@ -957,13 +999,13 @@ async def change_pet_position_handler(update: Update, context: ContextTypes.DEFA
 
             # include the default room in this list, we can select it as the new pet position.
             rooms_associated_to_user = list(filter(lambda dr: dr["type"] == "room",
-                                                          smart_home_dt.digital_replicas))
+                                                   smart_home_dt.digital_replicas))
 
             if len(rooms_associated_to_user) == 1 or len(rooms_associated_to_user) == 0:
                 await update.message.reply_text(
                     text=f'You have no other rooms in which your pet can be.\nIf you want, you can add one through the /room_association_change command.')
                 return ConversationHandler.END
-            else:   # let the user select the room.
+            else:  # let the user select the room.
 
                 keyboard = [
                     [
@@ -994,6 +1036,7 @@ async def change_pet_position_handler(update: Update, context: ContextTypes.DEFA
     finally:
         if dt_id:
             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
 
 def change_pet_position__room_selected_handler__builder(room_index: int, action: str = "room_chosen"):
     """creates a callbackQueryHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) which can handle the
@@ -1157,7 +1200,7 @@ def change_pet_position__room_selected_handler__builder(room_index: int, action:
                     "RetrievePetPositionService")  # this variable contains the exited' room according to the internal status of the pet tracking app...
 
                 #if the ids are the same, tell the user.
-                if exited_room_id ==  chosen_room["_id"]:
+                if exited_room_id == chosen_room["_id"]:
                     await update.message.reply_text(
                         f'The pet is already inside the {chosen_room["profile"]["name"]} room!',
                         reply_markup=ReplyKeyboardRemove()
@@ -1165,14 +1208,17 @@ def change_pet_position__room_selected_handler__builder(room_index: int, action:
                 else:
                     now = datetime.utcnow()
                     # move the pet from the previous room to the next, updating database too.
-                    current_app.config["MQTT_HANDLER"]._update_vacancy_status(now, exited_room_id, True)  # this one gets ALWAYS updated.
-                    current_app.config["MQTT_HANDLER"]._update_vacancy_status(now, chosen_room["_id"], False)  # this one gets ALWAYS updated.
+                    current_app.config["MQTT_HANDLER"]._update_vacancy_status(now, exited_room_id,
+                                                                              True)  # this one gets ALWAYS updated.
+                    current_app.config["MQTT_HANDLER"]._update_vacancy_status(now, chosen_room["_id"],
+                                                                              False)  # this one gets ALWAYS updated.
 
                     current_app.logger.info(
                         f"Moved pet from {exited_room_id} to {chosen_room['_id']}.")
 
                     await update.message.reply_text(
-                        f'Moved the pet to the {chosen_room["profile"]["name"]} room.', reply_markup=ReplyKeyboardRemove()
+                        f'Moved the pet to the {chosen_room["profile"]["name"]} room.',
+                        reply_markup=ReplyKeyboardRemove()
                     )
 
             else:
@@ -1198,7 +1244,6 @@ def change_pet_position__room_selected_handler__builder(room_index: int, action:
             # ]
             # reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
 
-
             await update.message.reply_text(
                 f'The selected room is not a valid room.', reply_markup=ReplyKeyboardRemove()
             )
@@ -1212,3 +1257,851 @@ def change_pet_position__room_selected_handler__builder(room_index: int, action:
 
     # returns the room_chosen variant by default.
     return coroutine_base(room_chosen)
+
+
+########################################################################################################################
+
+async def room_association_change_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dt_id, smart_home_dt, smart_home_dr = None, None, None
+
+    try:
+        result = _check_if_registered_through_telegramUpdate(update)
+
+        if result:
+            dt_id, smart_home_dt, smart_home_dr = result
+            smart_home_dt: DigitalTwin = smart_home_dt
+
+            # Include the default room in this list, we can associate it to devices...
+            rooms_associated_to_user = list(filter(lambda dr: dr["type"] == "room",
+                                                   smart_home_dt.digital_replicas))
+
+            if len(rooms_associated_to_user) == 0:
+                await update.message.reply_text(
+                    text=f"You have no rooms which you can associate to device's sides.\nContact support, cause the default room is missing!")
+                return ConversationHandler.END
+            else:
+                context.user_data["room_association_change_data"] = {}
+                # We can use the context.user_data optional field to store the currently selected room.
+                context.user_data["room_association_change_data"]["rooms_current_index"] = 0
+                context.user_data["room_association_change_data"]["selected_room_id"] = None
+                context.user_data["room_association_change_data"]["doors_current_index"] = 0
+                context.user_data["room_association_change_data"]["selected_door_id"] = None
+
+                # We can just make the user able to scroll
+                # the registered rooms with the < and > buttons! < takes us to the precedent room, > takes us to the next room!
+                # to aid the reader, let's keep this information inside this object...
+
+                keyboard = [
+                    [
+                        KeyboardButton("<"),
+                        KeyboardButton(rooms_associated_to_user[
+                                           context.user_data["room_association_change_data"]["rooms_current_index"]][
+                                           "profile"]["name"]),
+                        KeyboardButton(">"),
+                    ],
+                    [
+                        KeyboardButton("New room"),
+                    ]
+                ]
+
+                reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+                await update.message.reply_text(
+                    f'Please, choose a room from the menu, which will be associated to a device and a side...',
+                    reply_markup=reply_markup,
+                )
+
+                return "ROOM_SELECTION"  # move to the "room_selection" state, which is made of 4 different handlers...
+
+        else:
+            await update.message.reply_text(
+                "You are not a registered user.\n"
+                "If you have already bought our product, please, contact support at 123-456-7890"
+            )
+            return ConversationHandler.END
+    except Exception as e:
+        current_app.logger.error(e)
+        return ConversationHandler.END
+    finally:
+        if dt_id:
+            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+
+def room_association_change__room_selected_handler__builder(action: str = "room_chosen"):
+    """creates a callbackQueryHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) which can handle the
+    state 'room_index', which corresponds to the state in which we received a message that was built using a
+     replyKeyboardMarkup, that was showing the room at position context.user_data["room_association_change_data"]["rooms_current_index"]
+      of the list_of_rooms field of the smart_home DR."""
+
+    # To better explain it, let's see a real use example:
+    # "ok, seems like we received a message in this conversation. It came from a replykeyboardmarkup which
+    # was showing the... number <<<context.user_data["room_association_change_data"]["rooms_current_index"]>>> room."
+    # "let's check the message content..." (this is done by the ConversationalHandler's pattern matcher)
+
+    # is it a < ? we need to go back in the menu. >>>>> coroutine__go_back()
+    # is it a > ? we need to go forward in the menu. >>>>> coroutine__go_forward()
+    # is it a new_room ? we need to go to the "new_room" state (next message will be the name of the new room) >>>>> coroutine__new_room()
+    # is it anything else? Seems like the user clicked the room name of the previous keyboard! (if it didn't, and sent a random message, bad for him, this is the default course of action) >>>>> coroutine__room_selected()
+
+    def coroutine_base(routine_if_checks_are_good):
+        """
+        builds a routine starting from the coroutine that checks if the user is registered and if
+        it has rooms... accepts as input the routine that will execute if the checks pass.
+        """
+
+        async def coroutine_full(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            dt_id, smart_home_dt, smart_home_dr = None, None, None
+            current_index = context.user_data["room_association_change_data"]["rooms_current_index"]
+            try:
+                result = _check_if_registered_through_telegramUpdate(update)
+
+                if result:
+                    dt_id, smart_home_dt, smart_home_dr = result
+                    smart_home_dt: DigitalTwin = smart_home_dt
+
+                    rooms_associated_to_user = list(
+                        filter(lambda dr: dr["type"] == "room",
+                               smart_home_dt.digital_replicas))
+
+                    if len(rooms_associated_to_user) == 0:
+                        await update.message.reply_text(
+                            text=f"You have no rooms which you can associate to device's sides.\nContact support, cause the default room is missing!")
+                        return ConversationHandler.END
+                    else:
+
+                        return await routine_if_checks_are_good(update, context, smart_home_dt, smart_home_dr,
+                                                                current_index,
+                                                                rooms_associated_to_user)
+
+                else:
+                    await update.message.reply_text(
+                        "You are not a registered user.\n"
+                        "If you have already bought our product, please, contact support at 123-456-7890"
+                    )
+                    return ConversationHandler.END
+            except Exception as e:
+                current_app.logger.error(e)
+                return ConversationHandler.END
+            finally:
+                if dt_id:
+                    current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+        return coroutine_full
+
+    async def go_forward(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                         current_index, rooms_associated_to_user):
+        # can we go forward?
+        next_index = current_index + 1
+        if next_index < len(rooms_associated_to_user):
+            # save the index...
+            context.user_data["room_association_change_data"]["rooms_current_index"] = next_index
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[next_index]["profile"]["name"]),
+                    KeyboardButton(">"),
+                ],
+                [
+                    KeyboardButton("New room"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'Ok, next room!',
+                reply_markup=reply_markup,
+            )
+
+            return "ROOM_SELECTION"
+        else:
+            # do not update the current index in the context.user_data field...
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[current_index]["profile"]["name"]),
+                    KeyboardButton(">"),
+                ],
+                [
+                    KeyboardButton("New room"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'No more rooms on this side!',
+                reply_markup=reply_markup,
+            )
+
+            return "ROOM_SELECTION"
+
+    async def go_back(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                      current_index, rooms_associated_to_user):
+        # can we go backwards?
+        next_index = current_index - 1
+        if next_index >= 0:
+            # save the index
+            context.user_data["room_association_change_data"]["rooms_current_index"] = next_index
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[next_index]["profile"]["name"]),
+                    KeyboardButton(">"),
+                ],
+                [
+                    KeyboardButton("New room"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'Ok, previous room!',
+                reply_markup=reply_markup,
+            )
+
+            return "ROOM_SELECTION"
+        else:
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[current_index]["profile"]["name"]),
+                    KeyboardButton(">"),
+                ],
+                [
+                    KeyboardButton("New room"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'No more rooms on this side!',
+                reply_markup=reply_markup,
+            )
+
+            return "ROOM_SELECTION"
+
+    async def new_room(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                       current_index, rooms_associated_to_user):
+
+        reply_markup = ReplyKeyboardRemove()
+
+        await update.message.reply_text(
+            f'Enter the new room name:',
+            reply_markup=reply_markup,
+        )
+
+        return "NEW_ROOM"
+
+    async def room_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                          current_index, rooms_associated_to_user):
+
+        # check that the current_index is inside the rooms associated to the user...
+        if current_index < len(rooms_associated_to_user):
+            # a room was chosen. Get the current index and get the room_id.
+            chosen_room = rooms_associated_to_user[current_index]
+            if chosen_room["profile"]["name"] == update.message.text:
+
+                # save it in the context_user_data
+                context.user_data["room_association_change_data"]["selected_room_id"] = chosen_room["_id"]
+
+                # now retrieve the doors list
+                doors_associated_to_user = list(filter(lambda dr: dr["type"] == "door",
+                                                       smart_home_dt.digital_replicas))
+
+                if len(doors_associated_to_user) == 0:
+
+                    await update.message.reply_text(
+                        text=f"You have no devices to which you can associate the selected room.\nDo you wish to buy some? Contact us at 123-456-7890")
+                    return ConversationHandler.END
+                else:
+
+                    # We can use the context.user_data optional field to store the currently selected door.
+                    context.user_data["room_association_change_data"]["doors_current_index"] = 0
+                    context.user_data["room_association_change_data"]["selected_door_id"] = None
+
+                    # We can just make the user able to scroll
+                    # the registered rooms with the < and > buttons! < takes us to the precedent room, > takes us to the next room!
+                    # to aid the reader, let's keep this information inside this object...
+                    # current_conversation_state = {
+                    #    "rooms_associated_to_user": rooms_associated_to_user,
+                    # "current_index": 0 # set by the current state.
+                    # }
+
+                    keyboard = [
+                        [
+                            KeyboardButton("<"),
+                            KeyboardButton("NodeMCU@" + str(doors_associated_to_user[
+                                context.user_data["room_association_change_data"]["doors_current_index"]]["profile"][
+                                "seq_number"])),
+                            KeyboardButton(">"),
+                        ]
+                    ]
+
+                    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+                    await update.message.reply_text(
+                        f'You have chosen the {chosen_room["profile"]["name"]} room.\n\nNow choose to which device to associate it.',
+                        reply_markup=reply_markup
+                    )
+                    current_app.logger.info(
+                        f'User chose room {chosen_room["_id"]}... proceding to door choice...')
+            else:
+                await update.message.reply_text(
+                    f'Prompt closed.',
+                    reply_markup=ReplyKeyboardRemove()
+                )
+
+            # next stop! The DOOR_SELECTION STATE!
+            return "DOOR_SELECTION"
+
+        else:
+
+            await update.message.reply_text(
+                f'The selected room is not a valid room.', reply_markup=ReplyKeyboardRemove()
+            )
+
+            return ConversationHandler.END
+
+    if action == ">":
+        return coroutine_base(go_forward)
+    elif action == "<":
+        return coroutine_base(go_back)
+    elif action == "new_room":
+        return coroutine_base(new_room)
+
+    # returns the room_chosen variant by default.
+    return coroutine_base(room_chosen)
+
+
+async def room_association_change__new_room_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dt_id, smart_home_dt, smart_home_dr = None, None, None
+    try:
+        result = _check_if_registered_through_telegramUpdate(update)
+
+        if result:
+            dt_id, smart_home_dt, smart_home_dr = result
+            smart_home_dt: DigitalTwin = smart_home_dt
+
+            if "list_of_rooms" in smart_home_dr["data"]:
+                # max 20 user-defined rooms..
+                if 1 + len(smart_home_dr["data"]["list_of_rooms"]) <= MAX_PERSONAL_ROOMS_PER_USER + 1:
+
+                    # get the message content: it will be the new room's name
+
+                    dr_factory = current_app.config['DR_FACTORY']
+                    # create the new room DR
+                    room = dr_factory.create_dr('room',
+                                                {
+                                                    "profile": {
+                                                        "name": update.message.text[0:128]
+                                                    }
+
+                                                })
+
+                    smart_home_dr["data"]["list_of_rooms"].extend([room["_id"]])
+
+                    # add the room DR to the smart home DR (append)
+                    current_app.config['DR_FACTORY'].update_dr(
+                        "smart_home",
+                        smart_home_dr["_id"],
+                        {
+                            "data": {
+                                "list_of_rooms": smart_home_dr["data"]["list_of_rooms"]
+                                # updates the power saving mode status
+                            }
+                        }
+                    )
+
+                    # next stop, the door choice prompt...
+                    # save the created room id in the context_user_data
+                    context.user_data["room_association_change_data"]["selected_room_id"] = room["_id"]
+
+                    # now retrieve the doors list
+                    doors_associated_to_user = list(filter(lambda dr: dr["type"] == "door",
+                                                           smart_home_dt.digital_replicas))
+
+                    if len(doors_associated_to_user) == 0:
+
+                        await update.message.reply_text(
+                            text=f"You have no devices to which you can associate the selected room.\nDo you wish to buy some? Contact us at 123-456-7890")
+                        return ConversationHandler.END
+                    else:
+
+                        # We can use the context.user_data optional field to store the currently selected door.
+                        context.user_data["room_association_change_data"]["doors_current_index"] = 0
+                        context.user_data["room_association_change_data"]["selected_door_id"] = None
+
+                        keyboard = [
+                            [
+                                KeyboardButton("<"),
+                                KeyboardButton("NodeMCU@" + str(doors_associated_to_user[
+                                    context.user_data["room_association_change_data"]["doors_current_index"]][
+                                    "profile"]["seq_number"])),
+                                KeyboardButton(">"),
+                            ]
+                        ]
+
+                        reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+                    await update.message.reply_text(
+                        f'Added new room to your house: {room["profile"]["name"]}.\nNow choose to which device you want to associate it.',
+                        reply_markup=reply_markup
+                    )
+                    current_app.logger.info(
+                        f'Added new room {room["_id"]} to smart home {smart_home_dr["_id"]}.')
+
+                    return "DOOR_SELECTION"
+
+
+                else:  # todo: a place to add MACROs inside templates would be nice... Maybe it's better to add a validation field for list length...
+                    await update.message.reply_text(
+                        "You can't add any more rooms to your account!"
+                    )
+                    return ConversationHandler.END
+            else:
+                current_app.logger.error(
+                    f'No list_of_rooms key in smart home {smart_home_dr["_id"]} DR dict.')
+                return ConversationHandler.END
+        else:
+            await update.message.reply_text(
+                "You are not a registered user.\n"
+                "If you have already bought our product, please, contact support at 123-456-7890", reply_markup=None
+            )
+            return ConversationHandler.END
+
+    except Exception as e:
+        current_app.logger.error(e)
+        return ConversationHandler.END
+    finally:
+        if dt_id:
+            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+
+def room_association_change__door_selected_handler__builder(action: str = "door_chosen"):
+    """creates a callbackQueryHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) which can handle the
+    state 'door_index', which corresponds to the state in which we received a message that was built using a
+     replyKeyboardMarkup, that was showing the device/door at position context.user_data["room_association_change_data"]["doors_current_index"]
+      of the list_of_devices field of the smart_home DR."""
+
+    # same explanation of the other function, but now we're selecting doors...
+
+    def coroutine_base(routine_if_checks_are_good):
+        """
+        builds a routine starting from the coroutine that checks if the user is registered and if
+        it has rooms... accepts as input the routine that will execute if the checks pass.
+        """
+
+        async def coroutine_full(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            dt_id, smart_home_dt, smart_home_dr = None, None, None
+            current_index = context.user_data["room_association_change_data"]["doors_current_index"]
+            try:
+                result = _check_if_registered_through_telegramUpdate(update)
+
+                if result:
+                    dt_id, smart_home_dt, smart_home_dr = result
+                    smart_home_dt: DigitalTwin = smart_home_dt
+
+                    # now retrieve the doors list
+                    doors_associated_to_user = list(filter(lambda dr: dr["type"] == "door",
+                                                           smart_home_dt.digital_replicas))
+
+                    if len(doors_associated_to_user) == 0:
+                        await update.message.reply_text(
+                            text=f"You have no devices to which you can associate the selected room.\nDo you wish to buy some? Contact us at 123-456-7890")
+                        return ConversationHandler.END
+                    else:
+
+                        return await routine_if_checks_are_good(update, context, smart_home_dt, smart_home_dr,
+                                                                current_index,
+                                                                doors_associated_to_user)
+
+                else:
+                    await update.message.reply_text(
+                        "You are not a registered user.\n"
+                        "If you have already bought our product, please, contact support at 123-456-7890"
+                    )
+                    return ConversationHandler.END
+            except Exception as e:
+                current_app.logger.error(e)
+                return ConversationHandler.END
+            finally:
+                if dt_id:
+                    current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+        return coroutine_full
+
+    async def go_forward(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                         current_index, doors_associated_to_user):
+        # can we go forward?
+        next_index = current_index + 1
+        if next_index < len(doors_associated_to_user):
+            # save the index...
+            context.user_data["room_association_change_data"]["doors_current_index"] = next_index
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton("NodeMCU@" + str(doors_associated_to_user[
+                        context.user_data["room_association_change_data"]["doors_current_index"]][
+                        "profile"]["seq_number"])),
+                    KeyboardButton(">"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'Ok, next device!',
+                reply_markup=reply_markup,
+            )
+
+            return "DOOR_SELECTION"
+        else:
+            # do not update the current index in the context.user_data field...
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton("NodeMCU@" + str(doors_associated_to_user[
+                        context.user_data["room_association_change_data"]["doors_current_index"]][
+                        "profile"]["seq_number"])),
+                    KeyboardButton(">"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'No more devices on this side!',
+                reply_markup=reply_markup,
+            )
+
+            return "DOOR_SELECTION"
+
+    async def go_back(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                      current_index, doors_associated_to_user):
+        # can we go backwards?
+        next_index = current_index - 1
+        if next_index >= 0:
+            # save the index
+            context.user_data["room_association_change_data"]["doors_current_index"] = next_index
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton("NodeMCU@" + str(doors_associated_to_user[
+                        context.user_data["room_association_change_data"]["doors_current_index"]][
+                        "profile"]["seq_number"])),
+                    KeyboardButton(">"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'Ok, previous device!',
+                reply_markup=reply_markup,
+            )
+
+            return "DOOR_SELECTION"
+        else:
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton("NodeMCU@" + str(doors_associated_to_user[
+                        context.user_data["room_association_change_data"]["doors_current_index"]][
+                        "profile"]["seq_number"])),
+                    KeyboardButton(">"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'No more doors on this side!',
+                reply_markup=reply_markup,
+            )
+
+            return "DOOR_SELECTION"
+
+    async def door_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                          current_index, doors_associated_to_user):
+
+        # check that the current_index is inside the rooms associated to the user...
+        if current_index < len(doors_associated_to_user):
+            # a room was chosen. Get the current index and get the room_id.
+            chosen_door = doors_associated_to_user[current_index]
+
+            if ("NodeMCU@" + str(chosen_door["profile"]["seq_number"])) == update.message.text:
+
+                # save it in the context_user_data
+                context.user_data["room_association_change_data"]["selected_door_id"] = chosen_door["_id"]
+
+                keyboard = [
+                    [
+                        KeyboardButton("Entry side"),
+                        KeyboardButton("Exit side"),
+                    ]
+                ]
+
+                reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+                await update.message.reply_text(
+                    f'You have chosen the {"NodeMCU@" + str(chosen_door["profile"]["seq_number"])} device.\n\nNow choose to which side of the device you want to associate the previously selected room.',
+                    reply_markup=reply_markup
+                )
+                current_app.logger.info(
+                    f'User chose door {chosen_door["_id"]}... proceding to side choice...')
+
+                # next stop! The DOOR_SELECTION STATE!
+                return "SIDE_SELECTION"
+            else:
+                await update.message.reply_text(
+                    f'Prompt closed.',
+                    reply_markup=ReplyKeyboardRemove()
+                )
+
+
+        else:
+
+            await update.message.reply_text(
+                f'The selected door is not a valid door.', reply_markup=ReplyKeyboardRemove()
+            )
+
+        return ConversationHandler.END
+
+    if action == ">":
+        return coroutine_base(go_forward)
+    elif action == "<":
+        return coroutine_base(go_back)
+
+    # returns the room_chosen variant by default.
+    return coroutine_base(door_chosen)
+
+
+async def room_association_change_handler_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+
+    dt_id, smart_home_dt, smart_home_dr = None, None, None
+
+    try:
+        result = _check_if_registered_through_telegramUpdate(update)
+
+        if result:
+            dt_id, smart_home_dt, smart_home_dr = result
+
+            # all of them were set in the previous states... use them here...
+            # context.user_data["room_association_change_data"]["rooms_current_index"]
+            # context.user_data["room_association_change_data"]["selected_room_id"]
+            # context.user_data["door_association_change_data"]["doors_current_index"]
+            # context.user_data["room_association_change_data"]["selected_door_id"]
+            selected_door_dr = list(filter(
+                lambda door: door["_id"] == context.user_data["room_association_change_data"]["selected_door_id"],
+                filter(lambda dr: dr["type"] == "door", smart_home_dt.digital_replicas)))[0]
+
+            selected_room_dr = list(filter(
+                lambda room: room["_id"] == context.user_data["room_association_change_data"]["selected_room_id"],
+                filter(lambda dr: dr["type"] == "room", smart_home_dt.digital_replicas)))[0]
+
+            dt_id, smart_home_dt, smart_home_dr = result
+            smart_home_dt: DigitalTwin = smart_home_dt
+
+            # associate room with device's entry side.
+            current_app.config['DR_FACTORY'].update_dr(
+                "door",
+                context.user_data["room_association_change_data"]["selected_door_id"],
+                {
+                    "data": {# replicate on both override and normal assignment
+                        "entry_side_room_id": context.user_data["room_association_change_data"]["selected_room_id"],
+                        "override_entry_side_room_id": context.user_data["room_association_change_data"]["selected_room_id"],
+                    }
+                }
+            )
+            current_app.logger.info(
+                f'Door { context.user_data["room_association_change_data"]["selected_door_id"]} entry side room associations updated.')
+
+
+            # set denial status accordingly
+
+            selected_door_dr["data"]["entry_side_room_id"] = context.user_data["room_association_change_data"]["selected_room_id"]
+            selected_door_dr["data"]["override_entry_side_room_id"] = context.user_data["room_association_change_data"][
+                "selected_room_id"]
+
+            current_app.config["MQTT_HANDLER"].publish_denial_setting(smart_home_dr["profile"]["user"],
+                                                selected_door_dr["profile"]["seq_number"],
+                                                selected_room_dr["data"]["denial_status"],
+                                                "entry")
+
+
+            #check if the associations are the same, doesn't matter if you check override or normal, they are the same.
+            if selected_door_dr["data"]["entry_side_room_id"] == selected_door_dr["data"]["exit_side_room_id"]:
+                # if yes, activate the power saving.
+                current_app.config['DR_FACTORY'].update_dr(
+                    "door",
+                    context.user_data["room_association_change_data"]["selected_door_id"],
+                    {
+                        "data": {
+                            "power_saving_mode_status": True
+                        }
+                    }
+                )
+                current_app.config["MQTT_HANDLER"].publish_power_saving_mode(smart_home_dr["profile"]["user"],
+                                                                             selected_door_dr["profile"]["seq_number"],
+                                                                             True)
+
+                await update.message.reply_text(
+                    f'Association complete. The rooms associations are the same on both sides, so we put the device in power saving mode.\nDevice will not track anything.',
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+            else:
+                # deactivate power saving for the device.
+                # if yes, activate the power saving.
+                current_app.config['DR_FACTORY'].update_dr(
+                    "door",
+                    context.user_data["room_association_change_data"]["selected_door_id"],
+                    {
+                        "data": {
+                            "power_saving_mode_status": False
+                        }
+                    }
+                )
+                current_app.config["MQTT_HANDLER"].publish_power_saving_mode(smart_home_dr["profile"]["user"],
+                                                                             selected_door_dr["profile"]["seq_number"],
+                                                                             False)
+
+                await update.message.reply_text(
+                    f'Association complete. If the device was in power save mode, we turned it off.',
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+
+
+        else:
+
+            await update.message.reply_text(
+                "You are not a registered user.\n"
+                "If you have already bought our product, please, contact support at 123-456-7890"
+            )
+
+    except Exception as e:
+        current_app.logger.error(e)
+    finally:
+        if dt_id:
+            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+        return ConversationHandler.END
+
+
+async def room_association_change_handler_exit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    dt_id, smart_home_dt, smart_home_dr = None, None, None
+
+    try:
+        result = _check_if_registered_through_telegramUpdate(update)
+
+        if result:
+            dt_id, smart_home_dt, smart_home_dr = result
+            # all of them were set in the previous states... use them here...
+            # context.user_data["room_association_change_data"]["rooms_current_index"]
+            # context.user_data["room_association_change_data"]["selected_room_id"]
+            # context.user_data["door_association_change_data"]["doors_current_index"]
+            # context.user_data["room_association_change_data"]["selected_door_id"]
+            selected_door_dr = list(filter(
+                lambda door: door["_id"] == context.user_data["room_association_change_data"]["selected_door_id"],
+                filter(lambda dr: dr["type"] == "door", smart_home_dt.digital_replicas)))[0]
+
+            selected_room_dr = list(filter(
+                lambda room: room["_id"] == context.user_data["room_association_change_data"]["selected_room_id"],
+                filter(lambda dr: dr["type"] == "room", smart_home_dt.digital_replicas)))[0]
+
+            dt_id, smart_home_dt, smart_home_dr = result
+            smart_home_dt: DigitalTwin = smart_home_dt
+
+            # associate room with device's exit side.
+            current_app.config['DR_FACTORY'].update_dr(
+                "door",
+                context.user_data["room_association_change_data"]["selected_door_id"],
+                {
+                    "data": {# replicate on both override and normal assignment
+                        "exit_side_room_id": context.user_data["room_association_change_data"]["selected_room_id"],
+                        "override_exit_side_room_id": context.user_data["room_association_change_data"]["selected_room_id"],
+                    }
+                }
+            )
+            current_app.logger.info(
+                f'Door { context.user_data["room_association_change_data"]["selected_door_id"]} exit side room associations updated.')
+
+
+            # set denial status accordingly
+
+            selected_door_dr["data"]["exit_side_room_id"] = context.user_data["room_association_change_data"]["selected_room_id"]
+            selected_door_dr["data"]["override_exit_side_room_id"] = context.user_data["room_association_change_data"][
+                "selected_room_id"]
+
+            current_app.config["MQTT_HANDLER"].publish_denial_setting(smart_home_dr["profile"]["user"],
+                                                selected_door_dr["profile"]["seq_number"],
+                                                selected_room_dr["data"]["denial_status"],
+                                                "exit")
+
+
+            #check if the associations are the same, doesn't matter if you check override or normal, they are the same.
+            if selected_door_dr["data"]["entry_side_room_id"] == selected_door_dr["data"]["exit_side_room_id"]:
+                # if yes, activate the power saving.
+                current_app.config['DR_FACTORY'].update_dr(
+                    "door",
+                    context.user_data["room_association_change_data"]["selected_door_id"],
+                    {
+                        "data": {
+                            "power_saving_mode_status": True
+                        }
+                    }
+                )
+                current_app.config["MQTT_HANDLER"].publish_power_saving_mode(smart_home_dr["profile"]["user"],
+                                                                             selected_door_dr["profile"]["seq_number"],
+                                                                             True)
+
+                await update.message.reply_text(
+                    f'Association complete. The rooms associations are the same on both sides, so we put the device in power saving mode.\nDevice will not track anything.',
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+            else:
+                # deactivate power saving for the device.
+                # if yes, activate the power saving.
+                current_app.config['DR_FACTORY'].update_dr(
+                    "door",
+                    context.user_data["room_association_change_data"]["selected_door_id"],
+                    {
+                        "data": {
+                            "power_saving_mode_status": False
+                        }
+                    }
+                )
+                current_app.config["MQTT_HANDLER"].publish_power_saving_mode(smart_home_dr["profile"]["user"],
+                                                                             selected_door_dr["profile"]["seq_number"],
+                                                                             False)
+
+                await update.message.reply_text(
+                    f'Association complete. If the device was in power save mode, we turned it off.',
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+
+
+        else:
+
+            await update.message.reply_text(
+                "You are not a registered user.\n"
+                "If you have already bought our product, please, contact support at 123-456-7890"
+            )
+
+    except Exception as e:
+        current_app.logger.error(e)
+    finally:
+        if dt_id:
+            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+        return ConversationHandler.END

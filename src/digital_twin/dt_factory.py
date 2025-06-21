@@ -2,6 +2,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 from bson import ObjectId
 from flask import current_app
+from pymongo.errors import DuplicateKeyError
 
 from database import Database
 from src.virtualization.digital_replica.schema_registry import SchemaRegistry
@@ -39,13 +40,16 @@ class DTFactory:
                 "status": "active",
             },
         }
-
-        try:
-            dt_collection = self.db_service.db["digital_twins"]
-            result = dt_collection.insert_one(dt_data)
-            return str(result.inserted_id)
-        except Exception as e:
-            raise Exception(f"Failed to create Digital Twin: {str(e)}")
+        while(True):
+            try:
+                dt_collection = self.db_service.db["digital_twins"]
+                result = dt_collection.insert_one(dt_data)
+                return str(result.inserted_id)
+            except DuplicateKeyError as e:
+                # remove the old one...
+                self.delete_dt(self.get_dt_by_name(name)["_id"])
+            except Exception as e:
+                raise Exception(f"Failed to create Digital Twin: {str(e)}")
 
     def add_digital_replica(self, dt_id: str, dr_type: str, dr_id: str) -> None:
         """
