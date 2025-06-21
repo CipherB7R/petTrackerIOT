@@ -359,7 +359,7 @@ async def retrieve_pet_position_handler(update: Update, context: ContextTypes.DE
                                 smart_home_dt.digital_replicas))
             if rooms is None:
                 await update.message.reply_text(
-                    f'Your {smart_home_dr["profile"]["pet_name"]} is inside the {pet_position_room_dr["profile"]["name"]} room.'
+                    f'Something went wrong. Contact support.'
                 )
             else:
                 if len(rooms) == 1:
