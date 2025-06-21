@@ -44,6 +44,8 @@ def setup_handlers(application: Application):
             # per_message=True
         )
     )
+
+    # room denial change state handlers...
     room_denial_change_state_handlers = {
         str(k): v for k, v in zip(
             room_selection_states_list,
@@ -62,7 +64,7 @@ def setup_handlers(application: Application):
             ]
         )
     }
-    print(room_denial_change_state_handlers)
+    #print(room_denial_change_state_handlers)
     application.add_handler(
         ConversationHandler(
             entry_points=[CommandHandler("room_denial_statuses_change", room_denial_statuses_change_handler)],
@@ -79,6 +81,39 @@ def setup_handlers(application: Application):
         )
     )
 
+    #reset pet position handlers...
+    change_pet_position_handlers = {
+        str(k): v for k, v in zip(
+            room_selection_states_list,
+            [
+                [
+                    MessageHandler(filters.Regex(r"^<$"),
+                                   change_pet_position__room_selected_handler__builder(index, "<")),
+                    MessageHandler(filters.Regex(r"^>$"),
+                                   change_pet_position__room_selected_handler__builder(index, ">")),
+                    MessageHandler(filters.Regex(r"^New room$"),
+                                   change_pet_position__room_selected_handler__builder(index, "new_room")),
+                    MessageHandler(filters.Regex(r"^[a-zA-Z0-9\s]{1,128}$"),
+                                   change_pet_position__room_selected_handler__builder(index))
+                ]
+                for index in room_selection_states_list
+            ]
+        )
+    }
+    # print(room_denial_change_state_handlers)
+    application.add_handler(
+        ConversationHandler(
+            entry_points=[CommandHandler("change_pet_position", change_pet_position_handler)],
+            states=change_pet_position_handlers,
+            fallbacks=[
+                CommandHandler("start", conversation_start_handler),
+                MessageHandler(filters.ALL, conversation_echo_handler)
+            ],
+            # per_message=True
+        )
+    )
+
+    # default message handler for when we are not executing commands and the user writes gibberish...
     application.add_handler(
         # ~ means not, so the message sent by the telegram user must not contain
         # a command to pass this message to the echo_handler, instead of some other handler.
@@ -322,11 +357,21 @@ async def retrieve_pet_position_handler(update: Update, context: ContextTypes.DE
 
             rooms = list(filter(lambda dr: dr["type"] == "room" and dr["_id"] == pet_position_room_id,
                                 smart_home_dt.digital_replicas))
-            pet_position_room_dr = rooms[0]
+            if rooms is None:
+                await update.message.reply_text(
+                    f'Your {smart_home_dr["profile"]["pet_name"]} is inside the {pet_position_room_dr["profile"]["name"]} room.'
+                )
+            else:
+                if len(rooms) == 1:
+                    pet_position_room_dr = rooms[0]
 
-            await update.message.reply_text(
-                f'Your {smart_home_dr["profile"]["pet_name"]} is inside the {pet_position_room_dr["profile"]["name"]} room.'
-            )
+                    await update.message.reply_text(
+                        f'Your {smart_home_dr["profile"]["pet_name"]} is inside the {pet_position_room_dr["profile"]["name"]} room.'
+                    )
+                else:
+                    await update.message.reply_text(
+                        f'Something went wrong. Contact support.'
+                    )
 
         else:
             await update.message.reply_text(
@@ -897,3 +942,273 @@ async def new_room_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if dt_id:
             current_app.config["DT_FACTORY"].delete_dt(dt_id)
         return ConversationHandler.END
+
+
+
+
+async def change_pet_position_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dt_id, smart_home_dt, smart_home_dr = None, None, None
+    try:
+        result = _check_if_registered_through_telegramUpdate(update)
+
+        if result:
+            dt_id, smart_home_dt, smart_home_dr = result
+            smart_home_dt: DigitalTwin = smart_home_dt
+
+            # include the default room in this list, we can select it as the new pet position.
+            rooms_associated_to_user = list(filter(lambda dr: dr["type"] == "room",
+                                                          smart_home_dt.digital_replicas))
+
+            if len(rooms_associated_to_user) == 1 or len(rooms_associated_to_user) == 0:
+                await update.message.reply_text(
+                    text=f'You have no other rooms in which your pet can be.\nIf you want, you can add one through the /room_association_change command.')
+                return ConversationHandler.END
+            else:   # let the user select the room.
+
+                keyboard = [
+                    [
+                        KeyboardButton("<"),
+                        KeyboardButton(rooms_associated_to_user[0]["profile"]["name"]),
+                        KeyboardButton(">"),
+                    ]
+                ]
+
+                reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+                await update.message.reply_text(
+                    f'Please, place the pet inside some room and choose it from this list...',
+                    reply_markup=reply_markup,
+                )
+
+                return "0"  # move to the first handler.
+
+        else:
+            await update.message.reply_text(
+                "You are not a registered user.\n"
+                "If you have already bought our product, please, contact support at 123-456-7890"
+            )
+            return ConversationHandler.END
+    except Exception as e:
+        current_app.logger.error(e)
+        return ConversationHandler.END
+    finally:
+        if dt_id:
+            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+def change_pet_position__room_selected_handler__builder(room_index: int, action: str = "room_chosen"):
+    """creates a callbackQueryHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) which can handle the
+    state 'room_index', which corresponds to the state in which we received a message that was built using a
+     replyKeyboardMarkup that was showing the room at position room_index of the list_of_rooms field of the smart_home DR."""
+
+    # To better explain it, let's see a real use example:
+    # "ok, seems like we received a message in this conversation. It came from a replykeyboardmarkup which
+    # was showing the "current_index" room."
+    # "let's check the message content..." (this is done by the ConversationalHandler's pattern matcher)
+
+    # is it a < ? we need to go back in the menu. >>>>> coroutine__go_back()
+    # is it a > ? we need to go forward in the menu. >>>>> coroutine__go_forward()
+    # is it anything else? Seems like the user clicked the room name of the previous keyboard! (if it didn't, and sent a random message, bad for him, this is the default course of action) >>>>> coroutine__room_selected()
+
+    def coroutine_base(routine_if_checks_are_good):
+        """
+        builds a routine starting from the coroutine that checks if the user is registered and if
+        it has rooms... accepts as input the routine that will execute if the checks pass.
+        """
+
+        async def coroutine_full(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            dt_id, smart_home_dt, smart_home_dr = None, None, None
+            current_index = room_index
+            try:
+                result = _check_if_registered_through_telegramUpdate(update)
+
+                if result:
+                    dt_id, smart_home_dt, smart_home_dr = result
+                    smart_home_dt: DigitalTwin = smart_home_dt
+
+                    # include the default room in this list, we can select it as the new pet position.
+                    rooms_associated_to_user = list(filter(lambda dr: dr["type"] == "room",
+                                                           smart_home_dt.digital_replicas))
+
+                    if len(rooms_associated_to_user) == 0 or len(rooms_associated_to_user) == 1:
+                        await update.message.reply_text(
+                            text=f'You have no other rooms in which your pet can be.\nIf you want, you can add one through the /room_association_change command.')
+                        return ConversationHandler.END
+                    else:
+
+                        return await routine_if_checks_are_good(update, context, smart_home_dt, smart_home_dr,
+                                                                current_index,
+                                                                rooms_associated_to_user)
+
+                else:
+                    await update.message.reply_text(
+                        "You are not a registered user.\n"
+                        "If you have already bought our product, please, contact support at 123-456-7890"
+                    )
+                    return ConversationHandler.END
+            except Exception as e:
+                current_app.logger.error(e)
+                return ConversationHandler.END
+            finally:
+                if dt_id:
+                    current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+        return coroutine_full
+
+    async def go_forward(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                         current_index, rooms_associated_to_user):
+        # can we go forward?
+        next_index = current_index + 1
+        if next_index < MAX_PERSONAL_ROOMS_PER_USER:
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[next_index]["profile"]["name"] if next_index < len(
+                        rooms_associated_to_user) else "undefined"),
+                    KeyboardButton(">"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'Ok, next room!',
+                reply_markup=reply_markup,
+            )
+
+            print(str(next_index))
+            return str(next_index)
+        else:
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[current_index]["profile"]["name"] if current_index < len(
+                        rooms_associated_to_user) else "undefined"),
+                    KeyboardButton(">"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'No more rooms on this side!',
+                reply_markup=reply_markup,
+            )
+
+            print(str(current_index))
+            return str(current_index)
+
+    async def go_back(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                      current_index, rooms_associated_to_user):
+        # can we go backwards?
+        next_index = current_index - 1
+        if next_index >= 0:
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[next_index]["profile"]["name"] if next_index < len(
+                        rooms_associated_to_user) else "undefined"),
+                    KeyboardButton(">"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'Ok, previous room!',
+                reply_markup=reply_markup,
+            )
+
+            print(str(next_index))
+            return str(next_index)
+        else:
+
+            keyboard = [
+                [
+                    KeyboardButton("<"),
+                    KeyboardButton(rooms_associated_to_user[current_index]["profile"]["name"] if current_index < len(
+                        rooms_associated_to_user) else "undefined"),
+                    KeyboardButton(">"),
+                ]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+            await update.message.reply_text(
+                f'No more rooms on this side!',
+                reply_markup=reply_markup,
+            )
+
+            print(str(current_index))
+            return str(current_index)
+
+    async def room_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE, smart_home_dt, smart_home_dr,
+                          current_index, rooms_associated_to_user):
+
+        # check that the current_index is inside the rooms associated to the user...
+        if current_index < len(rooms_associated_to_user):
+            # a room was chosen. Get the current index and get the room_id.
+            chosen_room = rooms_associated_to_user[current_index]
+            if chosen_room["profile"]["name"] == update.message.text:
+
+                # get the room currently occupied by the pet (use the smart home DT services to gather it)
+                exited_room_id = smart_home_dt.execute_service(
+                    "RetrievePetPositionService")  # this variable contains the exited' room according to the internal status of the pet tracking app...
+
+                #if the ids are the same, tell the user.
+                if exited_room_id ==  chosen_room["_id"]:
+                    await update.message.reply_text(
+                        f'The pet is already inside the {chosen_room["profile"]["name"]} room!',
+                        reply_markup=ReplyKeyboardRemove()
+                    )
+                else:
+                    now = datetime.utcnow()
+                    # move the pet from the previous room to the next, updating database too.
+                    current_app.config["MQTT_HANDLER"]._update_vacancy_status(now, exited_room_id, True)  # this one gets ALWAYS updated.
+                    current_app.config["MQTT_HANDLER"]._update_vacancy_status(now, chosen_room["_id"], False)  # this one gets ALWAYS updated.
+
+                    current_app.logger.info(
+                        f"Moved pet from {exited_room_id} to {chosen_room['_id']}.")
+
+                    await update.message.reply_text(
+                        f'Moved the pet to the {chosen_room["profile"]["name"]} room.', reply_markup=ReplyKeyboardRemove()
+                    )
+
+            else:
+                await update.message.reply_text(
+                    f'Prompt closed.',
+                    reply_markup=ReplyKeyboardRemove()
+                )
+
+            # end the conversation.
+            return ConversationHandler.END
+
+        else:
+            # keyboard = [
+            #     [
+            #         KeyboardButton("<"),
+            #         KeyboardButton(rooms_associated_to_user[current_index]["profile"]["name"] if current_index < len(
+            #             rooms_associated_to_user) else "undefined"),
+            #         KeyboardButton(">"),
+            #     ],
+            #     [
+            #         KeyboardButton("New room"),
+            #     ]
+            # ]
+            # reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+
+            await update.message.reply_text(
+                f'The selected room is not a valid room.', reply_markup=ReplyKeyboardRemove()
+            )
+
+            return ConversationHandler.END
+
+    if action == ">":
+        return coroutine_base(go_forward)
+    elif action == "<":
+        return coroutine_base(go_back)
+
+    # returns the room_chosen variant by default.
+    return coroutine_base(room_chosen)
