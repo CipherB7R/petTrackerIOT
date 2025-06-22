@@ -99,6 +99,7 @@ class FindFaultsService(BaseService):
         faulted_doors = list(
             filter(lambda dr: (not dr["data"]["power_status"]),
                    doors))  # pick up all the DT's doors who are currently offline
+        print(faulted_doors)
 
         return faulted_doors
 

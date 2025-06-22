@@ -234,8 +234,12 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "If you have already bought our product, please, contact support at 123-456-7890"
             )
     finally:
-        if dt_id is not None:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)  # delete DT when we are done using it, from DB
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -312,9 +316,12 @@ async def room_denial_statutes_retrieval_handler(update: Update, context: Contex
             )
 
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
-
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 async def room_vacancy_statutes_retrieval_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dt_id, smart_home_dt, smart_home_dr = None, None, None
@@ -341,8 +348,12 @@ async def room_vacancy_statutes_retrieval_handler(update: Update, context: Conte
             )
 
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 async def room_statistics_retrieval_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dt_id, smart_home_dt, smart_home_dr = None, None, None
@@ -378,8 +389,12 @@ async def room_statistics_retrieval_handler(update: Update, context: ContextType
             )
 
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 
 async def list_faulted_devices_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -419,8 +434,12 @@ async def list_faulted_devices_handler(update: Update, context: ContextTypes.DEF
             )
 
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 
 async def retrieve_pet_position_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -460,8 +479,12 @@ async def retrieve_pet_position_handler(update: Update, context: ContextTypes.DE
             )
 
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 
 async def powersaving_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -488,7 +511,7 @@ async def powersaving_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                 reply_markup = InlineKeyboardMarkup(keyboard)
 
                 await update.message.reply_text(
-                    f'The power saving mode is currently {"ACTIVE" if smart_home_dr["data"]["power_saving_status"] else "INACTIVE"}.\n Do you wish to {"activate" if smart_home_dr["data"]["power_saving_status"] else "deactivate"} it?',
+                    f'The power saving mode is currently {"ACTIVE" if smart_home_dr["data"]["power_saving_status"] else "INACTIVE"}.\n Do you wish to {"activate" if not smart_home_dr["data"]["power_saving_status"] else "deactivate"} it?',
                     reply_markup=reply_markup
                 )
 
@@ -504,8 +527,12 @@ async def powersaving_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         current_app.logger.error(e)
         return ConversationHandler.END
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 
 async def powersaving_handler_yes(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -534,7 +561,7 @@ async def powersaving_handler_yes(update: Update, context: ContextTypes.DEFAULT_
             )
 
             # now we activate or deactivate devices, according to new power saving status... as per figure 1.14
-            if smart_home_dr["data"]["power_saving_status"]:
+            if not smart_home_dr["data"]["power_saving_status"]:
                 # we need to activate the devices that do not have the same room associations on both sides (we need to leave those inactive)...
                 changed_count = current_app.config['MQTT_HANDLER']._wake_up_devices_with_different_room_assignments(
                     smart_home_dt, smart_home_dr)
@@ -584,8 +611,13 @@ async def powersaving_handler_yes(update: Update, context: ContextTypes.DEFAULT_
     except Exception as e:
         current_app.logger.error(e)
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
+
         return ConversationHandler.END
 
 
@@ -612,8 +644,12 @@ async def powersaving_handler_no(update: Update, context: ContextTypes.DEFAULT_T
     except Exception as e:
         current_app.logger.error(e)
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
         return ConversationHandler.END
 
 
@@ -676,8 +712,12 @@ async def room_denial_statuses_change_handler(update: Update, context: ContextTy
         current_app.logger.error(e)
         return ConversationHandler.END
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 
 def room_denial_statuses_change__room_selected_handler__builder(room_index: int, action: str = "room_chosen"):
@@ -737,8 +777,12 @@ def room_denial_statuses_change__room_selected_handler__builder(room_index: int,
                 current_app.logger.error(e)
                 return ConversationHandler.END
             finally:
-                if dt_id:
-                    current_app.config["DT_FACTORY"].delete_dt(dt_id)
+                try:
+                    current_app.config["DT_FACTORY"].get_dt(dt_id)
+                    if dt_id:
+                        current_app.config["DT_FACTORY"].delete_dt(dt_id)
+                except Exception as e:
+                    current_app.logger.error(e)
 
         return coroutine_full
 
@@ -866,12 +910,15 @@ def room_denial_statuses_change__room_selected_handler__builder(room_index: int,
             if chosen_room["profile"]["name"] == update.message.text:
 
                 # change the denial setting for that room.
+                # retrieve the original smart_home_dr object...
+
+                chosen_room = list(filter(lambda dr: dr["type"] == "room" and dr["_id"] == chosen_room["_id"],
+                                smart_home_dt.digital_replicas))[0]
+
                 chosen_room["data"]["denial_status"] = not chosen_room["data"]["denial_status"]
 
                 #update it in the database too...
 
-                # reapply denial statuses for all devices...
-                current_app.config["MQTT_HANDLER"]._reapply_denial_statuses(smart_home_dt, smart_home_dr)
 
                 # add a new measurement to the chosen room dr: new denial setting
                 # get the latest setting change timestamp... if there is no measurements, let the creation time be it.
@@ -910,6 +957,9 @@ def room_denial_statuses_change__room_selected_handler__builder(room_index: int,
                 )
                 current_app.logger.info(
                     f"Room {chosen_room['_id']} measurements updated ")
+
+                # reapply denial statuses for all devices...
+                current_app.config["MQTT_HANDLER"]._reapply_denial_statuses(smart_home_dt, smart_home_dr)
 
                 await update.message.reply_text(
                     f'Updated room {chosen_room["profile"]["name"]} denial status to {chosen_room["data"]["denial_status"]}.',
@@ -1021,8 +1071,12 @@ async def new_room_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         current_app.logger.error(e)
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
         return ConversationHandler.END
 
 
@@ -1072,8 +1126,12 @@ async def change_pet_position_handler(update: Update, context: ContextTypes.DEFA
         current_app.logger.error(e)
         return ConversationHandler.END
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 
 def change_pet_position__room_selected_handler__builder(room_index: int, action: str = "room_chosen"):
@@ -1130,8 +1188,12 @@ def change_pet_position__room_selected_handler__builder(room_index: int, action:
                 current_app.logger.error(e)
                 return ConversationHandler.END
             finally:
-                if dt_id:
-                    current_app.config["DT_FACTORY"].delete_dt(dt_id)
+                try:
+                    current_app.config["DT_FACTORY"].get_dt(dt_id)
+                    if dt_id:
+                        current_app.config["DT_FACTORY"].delete_dt(dt_id)
+                except Exception as e:
+                    current_app.logger.error(e)
 
         return coroutine_full
 
@@ -1361,8 +1423,12 @@ async def room_association_change_handler(update: Update, context: ContextTypes.
         current_app.logger.error(e)
         return ConversationHandler.END
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 
 def room_association_change__room_selected_handler__builder(action: str = "room_chosen"):
@@ -1421,8 +1487,12 @@ def room_association_change__room_selected_handler__builder(action: str = "room_
                 current_app.logger.error(e)
                 return ConversationHandler.END
             finally:
-                if dt_id:
-                    current_app.config["DT_FACTORY"].delete_dt(dt_id)
+                try:
+                    current_app.config["DT_FACTORY"].get_dt(dt_id)
+                    if dt_id:
+                        current_app.config["DT_FACTORY"].delete_dt(dt_id)
+                except Exception as e:
+                    current_app.logger.error(e)
 
         return coroutine_full
 
@@ -1717,8 +1787,12 @@ async def room_association_change__new_room_handler(update: Update, context: Con
         current_app.logger.error(e)
         return ConversationHandler.END
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
 
 def room_association_change__door_selected_handler__builder(action: str = "door_chosen"):
@@ -1769,8 +1843,12 @@ def room_association_change__door_selected_handler__builder(action: str = "door_
                 current_app.logger.error(e)
                 return ConversationHandler.END
             finally:
-                if dt_id:
-                    current_app.config["DT_FACTORY"].delete_dt(dt_id)
+                try:
+                    current_app.config["DT_FACTORY"].get_dt(dt_id)
+                    if dt_id:
+                        current_app.config["DT_FACTORY"].delete_dt(dt_id)
+                except Exception as e:
+                    current_app.logger.error(e)
 
         return coroutine_full
 
@@ -2029,8 +2107,12 @@ async def room_association_change_handler_entry(update: Update, context: Context
     except Exception as e:
         current_app.logger.error(e)
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
         return ConversationHandler.END
 
@@ -2139,7 +2221,11 @@ async def room_association_change_handler_exit(update: Update, context: ContextT
     except Exception as e:
         current_app.logger.error(e)
     finally:
-        if dt_id:
-            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        try:
+            current_app.config["DT_FACTORY"].get_dt(dt_id)
+            if dt_id:
+                current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        except Exception as e:
+            current_app.logger.error(e)
 
         return ConversationHandler.END

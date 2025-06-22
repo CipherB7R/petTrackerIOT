@@ -1,3 +1,4 @@
+import telegram
 from flask import Flask
 from flask_cors import CORS
 
@@ -99,7 +100,7 @@ class FlaskServer:
             # Now that we have a public reachable URL, which will relay to our port 88 all the HTTP requests,
             # we need to...
             # TELEGRAM INITIALIZATION########################
-            application = Application.builder().token(TELEGRAM_TOKEN).build() # link our telegram bot
+            application = Application.builder().token(TELEGRAM_TOKEN).read_timeout(30).write_timeout(30).build() # link our telegram bot
             application.loop = loop # link an asyncronous event handler which will loop constantly waiting for events
             setup_handlers(application) # the telegram library provides us a way to link different routines (handlers) based on the content of the event
                                         # (like a message to the bot, if the message contains a command or is a natural language message without commands...)
@@ -143,6 +144,7 @@ class FlaskServer:
             self.app.config["DT_FACTORY"] = dt_factory
             self.app.config["DR_FACTORY"] = dr_factory
             self.app.config["TELEGRAM_BOT"] = application.bot
+            self.app.config["TELEGRAM_APPLICATION"] = application
             self.app.config["MQTT_HANDLER"] = self.mqtt_handler
 
         except Exception as e:

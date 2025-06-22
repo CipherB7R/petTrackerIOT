@@ -308,51 +308,51 @@ class DTFactory:
         """
         Create a DigitalTwin instance from database data with enhanced debugging
         """
-        print("\n=== Creating DT Instance ===")
+        #print("\n=== Creating DT Instance ===")
         try:
             # Create new DT instance
             dt = DigitalTwin()
-            print(f"Created new DT instance for {dt_data.get('name', 'unnamed')}")
+            #print(f"Created new DT instance for {dt_data.get('name', 'unnamed')}")
 
             # Add Digital Replicas
             for dr_ref in dt_data.get("digital_replicas", []):
                 dr = current_app.config["DR_FACTORY"].get_dr(dr_ref["type"], dr_ref["id"])
                 if dr:
                     dt.add_digital_replica(dr)
-                    print(f"Added DR: {dr_ref['type']} - {dr_ref['id']}")
+                    #print(f"Added DR: {dr_ref['type']} - {dr_ref['id']}")
 
             # Add Services
-            print("\nLoading services...")
+            #print("\nLoading services...")
             service_mapping = self._get_service_module_mapping()
-            print(f"Service mapping: {service_mapping}")
+            #print(f"Service mapping: {service_mapping}")
 
             for service_data in dt_data.get("services", []):
                 service_name = service_data["name"]
-                print(f"\nProcessing service: {service_name}")
+                #print(f"\nProcessing service: {service_name}")
 
                 if service_name in service_mapping:
                     try:
                         module_name = service_mapping[service_name]
-                        print(f"Loading module: {module_name}")
+                        #print(f"Loading module: {module_name}")
 
                         service_module = __import__(
                             module_name, fromlist=[service_name]
                         )
-                        print(f"Module loaded successfully")
+                        #print(f"Module loaded successfully")
 
                         service_class = getattr(service_module, service_name)
-                        print(f"Got service class: {service_class}")
+                        #print(f"Got service class: {service_class}")
 
                         service = service_class()
-                        print(f"Service instance created")
+                        #print(f"Service instance created")
 
                         if hasattr(service, "configure") and "config" in service_data:
                             service.configure(service_data["config"])
-                            print(f"Service configured with: {service_data['config']}")
+                            #print(f"Service configured with: {service_data['config']}")
 
                         dt.add_service(service)
-                        print(f"Service added to DT")
-                        print(f"Current DT services: {dt.list_services()}")
+                        #print(f"Service added to DT")
+                        #print(f"Current DT services: {dt.list_services()}")
                     except Exception as e:
                         print(f"Error adding service {service_name}: {str(e)}")
                         print(f"Exception type: {type(e)}")
@@ -362,8 +362,8 @@ class DTFactory:
             return dt
 
         except Exception as e:
-            print(f"Error creating DT: {str(e)}")
-            print(f"Exception type: {type(e)}")
+            #print(f"Error creating DT: {str(e)}")
+            #print(f"Exception type: {type(e)}")
             raise Exception(f"Failed to create DT from data: {str(e)}")
 
     def get_dt_instance(self, dt_id: str) -> Optional[DigitalTwin]:
