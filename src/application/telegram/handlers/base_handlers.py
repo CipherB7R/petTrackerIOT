@@ -27,6 +27,7 @@ def setup_handlers(application: Application):
     application.add_handler(CommandHandler("help", help_handler))
     application.add_handler(CommandHandler("room_denial_statuses_retrieval", room_denial_statutes_retrieval_handler))
     application.add_handler(CommandHandler("room_vacancy_statuses_retrieval", room_vacancy_statutes_retrieval_handler))
+    application.add_handler(CommandHandler("room_statistics_retrieval", room_statistics_retrieval_handler))
     application.add_handler(CommandHandler("list_faulted_devices", list_faulted_devices_handler))
     application.add_handler(CommandHandler("retrieve_pet_position", retrieve_pet_position_handler))
 
@@ -328,6 +329,43 @@ async def room_vacancy_statutes_retrieval_handler(update: Update, context: Conte
             for dr in smart_home_dt.digital_replicas:
                 if dr["type"] == "room":
                     final_message += f'{"🔴" if not dr["data"]["vacancy_status"] else "⚪"} {dr["profile"]["name"]}\n'
+
+            await update.message.reply_text(
+                final_message
+            )
+
+        else:
+            await update.message.reply_text(
+                "You are not a registered user.\n"
+                "If you have already bought our product, please, contact support at 123-456-7890"
+            )
+
+    finally:
+        if dt_id:
+            current_app.config["DT_FACTORY"].delete_dt(dt_id)
+
+async def room_statistics_retrieval_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dt_id, smart_home_dt, smart_home_dr = None, None, None
+    try:
+        result = _check_if_registered_through_telegramUpdate(update)
+
+        if result:
+            dt_id, smart_home_dt, smart_home_dr = result
+            smart_home_dt: DigitalTwin = smart_home_dt
+
+            rooms_statistics = smart_home_dt.execute_service(
+                "RoomAnalyticsService") # execute the room analytics services...
+
+            final_message = "Here is the statistics for all rooms:\n"
+            # the service will take each room DR in the smart_home_dt and calculate the analytics.
+            for _, statistics in rooms_statistics.items():
+                # list the statistics of this room...
+                final_message += f'\n\n{statistics["name"]} room\n\n'
+                final_message += f'The pet spent a total of {statistics["tot_time_pet_inside"]} seconds inside the room.\n'
+                final_message += f'The pet entered {statistics["num_of_times_it_entered_that_room"]} times inside the room.\n'
+                final_message += f'The most recent pet access to the room is dated {str(statistics["last_time_timestamp"])}.\n'
+                final_message += f'The room was set in denial for {statistics["total_time_room_denial"]} total seconds.\n'
+                final_message += f'The pet spent a total of {statistics["total_time_pet_inside_while_room_denial_was_active"]} seconds inside the room, meanwhile denial was active.\n'
 
             await update.message.reply_text(
                 final_message

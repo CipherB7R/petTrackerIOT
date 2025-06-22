@@ -17,7 +17,7 @@ schemas:  # TODO: delete deprecated data entries
       #pet_accesses: List[Dict] # dictionary of accesses, elements contain timestamp_of_access and duration
       #denial_statuses: List[Dict] # dictionary of past denial setting, elements contain timestamp_of_setting and duration
       measurements: List[Dict] # each pet access will be stored as a measurement with type "pet_access", value equal to the duration and timestamp of access
-                               # each denial status setting will be stores as another measurement with type "denial_status_change", value equal to the duration of the previous setting, and timestamp of the new setting
+                               # each denial status setting will be stored as another measurement with type "denial_status_change", value equal to the duration of the previous setting, and timestamp of the new setting
 
 
   validations:
