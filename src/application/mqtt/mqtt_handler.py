@@ -50,21 +50,29 @@ def get_smart_home_dt_and_dr_from_customer_username(customer) -> Optional[tuple[
             f"Smart home not found for customer {customer}")
         return None
     smart_home_dr = smart_home_drs[0]
-    # create the smart home DT
+
+    # create the smart home DT or get the old one from the database...
     dt_id = current_app.config['DT_FACTORY'].create_dt(
         name="smart_home__" + customer,
         description="Digital Twin for smart home management"
     )
-    # add the room and door DRs to the smart home DT
+
+    # wipe out the old smart home DT digital replicas (SYNCRONIZE DIGITAL REPLICAS WITH SMART HOME DR REPRESENTATION)
+    current_app.config['DT_FACTORY'].reset_services(dt_id)
+    current_app.config['DT_FACTORY'].reset_digital_replicas(dt_id)
+
+    # add the room and door DRs to the smart home DT, synchronizing it with the DR database
     for room_id in smart_home_dr['data']['list_of_rooms']:
         current_app.config['DT_FACTORY'].add_digital_replica(dt_id, "room", room_id)
     for door_id in smart_home_dr['data']['list_of_devices']:
         current_app.config['DT_FACTORY'].add_digital_replica(dt_id, "door", door_id)
+
     # add all the services the DT would have
     current_app.config['DT_FACTORY'].add_service(dt_id, "FaultRecoveryService")
     current_app.config['DT_FACTORY'].add_service(dt_id, "RetrievePetPositionService")
     current_app.config['DT_FACTORY'].add_service(dt_id, "FindFaultsService")
     current_app.config['DT_FACTORY'].add_service(dt_id, "RoomAnalyticsService")
+
     # get its instance: it's important because launching this code will retrieve all the door_dr and room_dr
     # data from the database, and we'll be able to access them comfortably through the DT instance's digital_replicas property;
     # IN OTHER WORDS: NO NEED TO CALL get_dr() FOR EACH room_id and door_id IN HERE!!!!
@@ -184,13 +192,13 @@ class DoorMQTTHandler:
 
             except Exception as e:
                 self.app.logger.error(f"Error processing MQTT message: {e}")
-            finally:
-                try:
-                    current_app.config["DT_FACTORY"].get_dt(dt_id)
-                    if dt_id:
-                        current_app.config["DT_FACTORY"].delete_dt(dt_id)
-                except Exception as e:
-                    current_app.logger.error(e)
+            # finally:
+            #     try:
+            #         current_app.config["DT_FACTORY"].get_dt(dt_id)
+            #         if dt_id:
+            #             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+            #     except Exception as e:
+            #         current_app.logger.error(e)
 
     @property
     def is_connected(self):

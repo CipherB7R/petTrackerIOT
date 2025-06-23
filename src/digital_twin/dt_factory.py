@@ -46,8 +46,10 @@ class DTFactory:
                 result = dt_collection.insert_one(dt_data)
                 return str(result.inserted_id)
             except DuplicateKeyError as e:
-                # remove the old one...
-                self.delete_dt(self.get_dt_by_name(name)["_id"])
+                # # remove the old one...
+                # self.delete_dt(self.get_dt_by_name(name)["_id"])
+                # get the old one...
+                return self.get_dt_by_name(name)["_id"]
             except Exception as e:
                 raise Exception(f"Failed to create Digital Twin: {str(e)}")
 
@@ -79,6 +81,29 @@ class DTFactory:
         except Exception as e:
             raise Exception(f"Failed to add Digital Replica: {str(e)}")
 
+    def reset_digital_replicas(self, dt_id: str):
+        """
+        Reset Digital Replica references' list in a Digital Twin
+
+        Args:
+            dt_id: Digital Twin ID
+            dr_type: Type of Digital Replica
+            dr_id: Digital Replica ID
+        """
+        try:
+            dt_collection = self.db_service.db["digital_twins"]
+
+            # reset DR references
+            dt_collection.update_one(
+                {"_id": dt_id},
+                {
+                    "$set": {"digital_replicas": [],
+                             "metadata.updated_at": datetime.utcnow()}
+                },
+            )
+        except Exception as e:
+            raise Exception(f"Failed to reset Digital Replicas List: {str(e)}")
+
     def _get_service_module_mapping(self) -> Dict[str, str]:
         """
         Returns a mapping of service names to their module paths
@@ -99,8 +124,6 @@ class DTFactory:
 
         Args:
             dt_id: Digital Twin ID
-            service_name: Name of the service
-            service_config: Optional service configuration
         """
         try:
             dt_collection = self.db_service.db["digital_twins"]
@@ -144,6 +167,28 @@ class DTFactory:
 
         except Exception as e:
             raise Exception(f"Failed to add service: {str(e)}")
+
+    def reset_services(self, dt_id: str) -> None:
+        """
+        Resets a service references' list in a Digital Twin
+        Args:
+            dt_id: Digital Twin ID
+        """
+        try:
+            dt_collection = self.db_service.db["digital_twins"]
+
+            # reset DR references
+            dt_collection.update_one(
+                {"_id": dt_id},
+                {
+                    "$set": {"services": [],
+                             "metadata.updated_at": datetime.utcnow()}
+                },
+            )
+
+
+        except Exception as e:
+            raise Exception(f"Failed to reset services' list: {str(e)}")
 
     def get_dt(self, dt_id: str) -> Optional[Dict]:
         """
@@ -234,32 +279,32 @@ class DTFactory:
         except Exception as e:
             raise Exception(f"Failed to delete Digital Twin: {str(e)}")
 
-    # def remove_digital_replica(self, dt_id: str, dr_id: str) -> None:
-    #     """
-    #     Remove a Digital Replica reference from a Digital Twin
-    #
-    #     Args:
-    #         dt_id: Digital Twin ID
-    #         dr_id: Digital Replica ID
-    #     """
-    #     try:
-    #         dt_collection = self.db_service.db["digital_twins"]
-    #
-    #         dt_collection.update_one(
-    #             {"_id": dt_id},
-    #             {
-    #                 "$pull": {
-    #                     "digital_replicas": {
-    #                         "id": dr_id
-    #                     }
-    #                 },
-    #                 "$set": {
-    #                     "metadata.updated_at": datetime.utcnow()
-    #                 }
-    #             }
-    #         )
-    #     except Exception as e:
-    #         raise Exception(f"Failed to remove Digital Replica: {str(e)}")
+    def remove_digital_replica(self, dt_id: str, dr_id: str) -> None:
+        """
+        Remove a Digital Replica reference from a Digital Twin
+
+        Args:
+            dt_id: Digital Twin ID
+            dr_id: Digital Replica ID
+        """
+        try:
+            dt_collection = self.db_service.db["digital_twins"]
+
+            dt_collection.update_one(
+                {"_id": dt_id},
+                {
+                    "$pull": {
+                        "digital_replicas": {
+                            "id": dr_id
+                        }
+                    },
+                    "$set": {
+                        "metadata.updated_at": datetime.utcnow()
+                    }
+                }
+            )
+        except Exception as e:
+            raise Exception(f"Failed to remove Digital Replica: {str(e)}")
 
     # def remove_service(self, dt_id: str, service_name: str) -> None:
     #     """

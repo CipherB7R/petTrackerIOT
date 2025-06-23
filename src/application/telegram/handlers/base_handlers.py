@@ -219,27 +219,27 @@ async def save_chat_id(update, context):
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler for the /start command"""
     dt_id = None
-    try:
-        result = _check_if_registered_through_telegramUpdate(update)
-        if result:
-            dt_id, _, _ = result
-            await save_chat_id(update, context)
-            await update.message.reply_text(
-                f"Hi {update.effective_user.username}! I'm your pet tracker controller.\n"
-                "Use /help to show all the possible commands."
-            )
-        else:
-            await update.message.reply_text(
-                "You are not a registered user.\n"
-                "If you have already bought our product, please, contact support at 123-456-7890"
-            )
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    #try:
+    result = _check_if_registered_through_telegramUpdate(update)
+    if result:
+        dt_id, _, _ = result
+        await save_chat_id(update, context)
+        await update.message.reply_text(
+            f"Hi {update.effective_user.username}! I'm your pet tracker controller.\n"
+            "Use /help to show all the possible commands."
+        )
+    else:
+        await update.message.reply_text(
+            "You are not a registered user.\n"
+            "If you have already bought our product, please, contact support at 123-456-7890"
+        )
+    #finally:
+        # try:
+        #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+        #     if dt_id:
+        #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        # except Exception as e:
+        #     current_app.logger.error(e)
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -292,199 +292,199 @@ async def conversation_start_handler(update: Update, context: ContextTypes.DEFAU
 
 async def room_denial_statutes_retrieval_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dt_id, smart_home_dt, smart_home_dr = None, None, None
-    try:
-        result = _check_if_registered_through_telegramUpdate(update)
+   # try:
+    result = _check_if_registered_through_telegramUpdate(update)
 
-        if result:
-            dt_id, smart_home_dt, smart_home_dr = result
-            smart_home_dt: DigitalTwin = smart_home_dt
-            final_message = "Here is the room denial status for all rooms:\n ⛔: denied room; 🟢: accessible room\n\n"
+    if result:
+        dt_id, smart_home_dt, smart_home_dr = result
+        smart_home_dt: DigitalTwin = smart_home_dt
+        final_message = "Here is the room denial status for all rooms:\n ⛔: denied room; 🟢: accessible room\n\n"
 
-            # take each room DR in the smart_home_dt
-            for dr in smart_home_dt.digital_replicas:
-                if dr["type"] == "room":
-                    final_message += f'{"⛔" if dr["data"]["denial_status"] else "🟢"} {dr["profile"]["name"]}\n'
+        # take each room DR in the smart_home_dt
+        for dr in smart_home_dt.digital_replicas:
+            if dr["type"] == "room":
+                final_message += f'{"⛔" if dr["data"]["denial_status"] else "🟢"} {dr["profile"]["name"]}\n'
 
-            await update.message.reply_text(
-                final_message
-            )
+        await update.message.reply_text(
+            final_message
+        )
 
-        else:
-            await update.message.reply_text(
-                "You are not a registered user.\n"
-                "If you have already bought our product, please, contact support at 123-456-7890"
-            )
+    else:
+        await update.message.reply_text(
+            "You are not a registered user.\n"
+            "If you have already bought our product, please, contact support at 123-456-7890"
+        )
 
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    #finally:
+        # try:
+        #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+        #     if dt_id:
+        #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        # except Exception as e:
+        #     current_app.logger.error(e)
 
 async def room_vacancy_statutes_retrieval_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dt_id, smart_home_dt, smart_home_dr = None, None, None
-    try:
-        result = _check_if_registered_through_telegramUpdate(update)
+    #try:
+    result = _check_if_registered_through_telegramUpdate(update)
 
-        if result:
-            dt_id, smart_home_dt, smart_home_dr = result
-            smart_home_dt: DigitalTwin = smart_home_dt
-            final_message = "Here is the room vacancy status for all rooms:\n 🔴: occupied room; ⚪: empty room\n\n"
-            # take each room DR in the smart_home_dt
-            for dr in smart_home_dt.digital_replicas:
-                if dr["type"] == "room":
-                    final_message += f'{"🔴" if not dr["data"]["vacancy_status"] else "⚪"} {dr["profile"]["name"]}\n'
+    if result:
+        dt_id, smart_home_dt, smart_home_dr = result
+        smart_home_dt: DigitalTwin = smart_home_dt
+        final_message = "Here is the room vacancy status for all rooms:\n 🔴: occupied room; ⚪: empty room\n\n"
+        # take each room DR in the smart_home_dt
+        for dr in smart_home_dt.digital_replicas:
+            if dr["type"] == "room":
+                final_message += f'{"🔴" if not dr["data"]["vacancy_status"] else "⚪"} {dr["profile"]["name"]}\n'
 
-            await update.message.reply_text(
-                final_message
-            )
+        await update.message.reply_text(
+            final_message
+        )
 
-        else:
-            await update.message.reply_text(
-                "You are not a registered user.\n"
-                "If you have already bought our product, please, contact support at 123-456-7890"
-            )
+    else:
+        await update.message.reply_text(
+            "You are not a registered user.\n"
+            "If you have already bought our product, please, contact support at 123-456-7890"
+        )
 
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    #finally:
+        # try:
+        #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+        #     if dt_id:
+        #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        # except Exception as e:
+        #     current_app.logger.error(e)
 
 async def room_statistics_retrieval_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dt_id, smart_home_dt, smart_home_dr = None, None, None
-    try:
-        result = _check_if_registered_through_telegramUpdate(update)
+    #try:
+    result = _check_if_registered_through_telegramUpdate(update)
 
-        if result:
-            dt_id, smart_home_dt, smart_home_dr = result
-            smart_home_dt: DigitalTwin = smart_home_dt
+    if result:
+        dt_id, smart_home_dt, smart_home_dr = result
+        smart_home_dt: DigitalTwin = smart_home_dt
 
-            rooms_statistics = smart_home_dt.execute_service(
-                "RoomAnalyticsService") # execute the room analytics services...
+        rooms_statistics = smart_home_dt.execute_service(
+            "RoomAnalyticsService") # execute the room analytics services...
 
-            final_message = "Here is the statistics for all rooms:\n"
-            # the service will take each room DR in the smart_home_dt and calculate the analytics.
-            for _, statistics in rooms_statistics.items():
-                # list the statistics of this room...
-                final_message += f'\n\n{statistics["name"]} room\n\n'
-                final_message += f'The pet spent a total of {statistics["tot_time_pet_inside"]} seconds inside the room.\n'
-                final_message += f'The pet entered {statistics["num_of_times_it_entered_that_room"]} times inside the room.\n'
-                final_message += f'The most recent pet access to the room is dated {str(statistics["last_time_timestamp"])}.\n'
-                final_message += f'The room was set in denial for {statistics["total_time_room_denial"]} total seconds.\n'
-                final_message += f'The pet spent a total of {statistics["total_time_pet_inside_while_room_denial_was_active"]} seconds inside the room, meanwhile denial was active.\n'
+        final_message = "Here is the statistics for all rooms:\n"
+        # the service will take each room DR in the smart_home_dt and calculate the analytics.
+        for _, statistics in rooms_statistics.items():
+            # list the statistics of this room...
+            final_message += f'\n\n{statistics["name"]} room\n\n'
+            final_message += f'The pet spent a total of {statistics["tot_time_pet_inside"]} seconds inside the room.\n'
+            final_message += f'The pet entered {statistics["num_of_times_it_entered_that_room"]} times inside the room.\n'
+            final_message += f'The most recent pet access to the room is dated {str(statistics["last_time_timestamp"])}.\n'
+            final_message += f'The room was set in denial for {statistics["total_time_room_denial"]} total seconds.\n'
+            final_message += f'The pet spent a total of {statistics["total_time_pet_inside_while_room_denial_was_active"]} seconds inside the room, meanwhile denial was active.\n'
 
-            await update.message.reply_text(
-                final_message
-            )
+        await update.message.reply_text(
+            final_message
+        )
 
-        else:
-            await update.message.reply_text(
-                "You are not a registered user.\n"
-                "If you have already bought our product, please, contact support at 123-456-7890"
-            )
+    else:
+        await update.message.reply_text(
+            "You are not a registered user.\n"
+            "If you have already bought our product, please, contact support at 123-456-7890"
+        )
 
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    #finally:
+        # try:
+        #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+        #     if dt_id:
+        #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        # except Exception as e:
+        #     current_app.logger.error(e)
 
 
 async def list_faulted_devices_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dt_id, smart_home_dt, smart_home_dr = None, None, None
-    try:
-        result = _check_if_registered_through_telegramUpdate(update)
+    #try:
+    result = _check_if_registered_through_telegramUpdate(update)
 
-        if result:
-            dt_id, smart_home_dt, smart_home_dr = result
-            smart_home_dt: DigitalTwin = smart_home_dt
+    if result:
+        dt_id, smart_home_dt, smart_home_dr = result
+        smart_home_dt: DigitalTwin = smart_home_dt
 
-            list_of_faulted_devices = smart_home_dt.execute_service(
-                "FindFaultsService")
+        list_of_faulted_devices = smart_home_dt.execute_service(
+            "FindFaultsService")
 
-            if list_of_faulted_devices is None or len(
-                    list_of_faulted_devices) == 0:  # yes, all devices are now functional
-                await update.message.reply_text(
-                    "No faults detected!"
-                )
-            else:
-
-                final_message = "Some faults were detected, here is the list of faulted devices:\n\n"
-
-                # take each room DR in the smart_home_dt
-                for dr in smart_home_dt.digital_replicas:
-                    if dr["type"] == "door" and not dr["data"]["power_status"]:
-                        final_message += f'{dr["profile"]["device_name"]}@{dr["profile"]["seq_number"]}\n'
-
-                await update.message.reply_text(
-                    final_message
-                )
-
-        else:
+        if list_of_faulted_devices is None or len(
+                list_of_faulted_devices) == 0:  # yes, all devices are now functional
             await update.message.reply_text(
-                "You are not a registered user.\n"
-                "If you have already bought our product, please, contact support at 123-456-7890"
+                "No faults detected!"
+            )
+        else:
+
+            final_message = "Some faults were detected, here is the list of faulted devices:\n\n"
+
+            # take each room DR in the smart_home_dt
+            for dr in smart_home_dt.digital_replicas:
+                if dr["type"] == "door" and not dr["data"]["power_status"]:
+                    final_message += f'{dr["profile"]["device_name"]}@{dr["profile"]["seq_number"]}\n'
+
+            await update.message.reply_text(
+                final_message
             )
 
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    else:
+        await update.message.reply_text(
+            "You are not a registered user.\n"
+            "If you have already bought our product, please, contact support at 123-456-7890"
+        )
+
+    #finally:
+        # try:
+        #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+        #     if dt_id:
+        #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        # except Exception as e:
+        #     current_app.logger.error(e)
 
 
 async def retrieve_pet_position_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dt_id, smart_home_dt, smart_home_dr = None, None, None
-    try:
-        result = _check_if_registered_through_telegramUpdate(update)
+    # try:
+    result = _check_if_registered_through_telegramUpdate(update)
 
-        if result:
-            dt_id, smart_home_dt, smart_home_dr = result
-            smart_home_dt: DigitalTwin = smart_home_dt
+    if result:
+        dt_id, smart_home_dt, smart_home_dr = result
+        smart_home_dt: DigitalTwin = smart_home_dt
 
-            pet_position_room_id = smart_home_dt.execute_service(
-                "RetrievePetPositionService")
+        pet_position_room_id = smart_home_dt.execute_service(
+            "RetrievePetPositionService")
 
-            rooms = list(filter(lambda dr: dr["type"] == "room" and dr["_id"] == pet_position_room_id,
-                                smart_home_dt.digital_replicas))
-            if rooms is None:
+        rooms = list(filter(lambda dr: dr["type"] == "room" and dr["_id"] == pet_position_room_id,
+                            smart_home_dt.digital_replicas))
+        if rooms is None:
+            await update.message.reply_text(
+                f'Something went wrong. Contact support.'
+            )
+        else:
+            if len(rooms) == 1:
+                pet_position_room_dr = rooms[0]
+
+                await update.message.reply_text(
+                    f'Your {smart_home_dr["profile"]["pet_name"]} is inside the {pet_position_room_dr["profile"]["name"]} room.'
+                )
+            else:
                 await update.message.reply_text(
                     f'Something went wrong. Contact support.'
                 )
-            else:
-                if len(rooms) == 1:
-                    pet_position_room_dr = rooms[0]
 
-                    await update.message.reply_text(
-                        f'Your {smart_home_dr["profile"]["pet_name"]} is inside the {pet_position_room_dr["profile"]["name"]} room.'
-                    )
-                else:
-                    await update.message.reply_text(
-                        f'Something went wrong. Contact support.'
-                    )
+    else:
+        await update.message.reply_text(
+            "You are not a registered user.\n"
+            "If you have already bought our product, please, contact support at 123-456-7890"
+        )
 
-        else:
-            await update.message.reply_text(
-                "You are not a registered user.\n"
-                "If you have already bought our product, please, contact support at 123-456-7890"
-            )
-
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    # finally:
+    #     # try:
+    #     #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+    #     #     if dt_id:
+    #     #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+    #     # except Exception as e:
+    #     #     current_app.logger.error(e)
 
 
 async def powersaving_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -526,13 +526,13 @@ async def powersaving_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         current_app.logger.error(e)
         return ConversationHandler.END
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    # finally:
+    #     # try:
+    #     #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+    #     #     if dt_id:
+    #     #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+    #     # except Exception as e:
+    #     #     current_app.logger.error(e)
 
 
 async def powersaving_handler_yes(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -611,12 +611,12 @@ async def powersaving_handler_yes(update: Update, context: ContextTypes.DEFAULT_
     except Exception as e:
         current_app.logger.error(e)
     finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+        # try:
+        #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+        #     if dt_id:
+        #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        # except Exception as e:
+        #     current_app.logger.error(e)
 
         return ConversationHandler.END
 
@@ -644,12 +644,12 @@ async def powersaving_handler_no(update: Update, context: ContextTypes.DEFAULT_T
     except Exception as e:
         current_app.logger.error(e)
     finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+        # try:
+        #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+        #     if dt_id:
+        #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        # except Exception as e:
+        #     current_app.logger.error(e)
         return ConversationHandler.END
 
 
@@ -711,13 +711,13 @@ async def room_denial_statuses_change_handler(update: Update, context: ContextTy
     except Exception as e:
         current_app.logger.error(e)
         return ConversationHandler.END
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    # finally:
+    #     try:
+    #         current_app.config["DT_FACTORY"].get_dt(dt_id)
+    #         if dt_id:
+    #             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+    #     except Exception as e:
+    #         current_app.logger.error(e)
 
 
 def room_denial_statuses_change__room_selected_handler__builder(room_index: int, action: str = "room_chosen"):
@@ -776,13 +776,13 @@ def room_denial_statuses_change__room_selected_handler__builder(room_index: int,
             except Exception as e:
                 current_app.logger.error(e)
                 return ConversationHandler.END
-            finally:
-                try:
-                    current_app.config["DT_FACTORY"].get_dt(dt_id)
-                    if dt_id:
-                        current_app.config["DT_FACTORY"].delete_dt(dt_id)
-                except Exception as e:
-                    current_app.logger.error(e)
+            # finally:
+            #     try:
+            #         current_app.config["DT_FACTORY"].get_dt(dt_id)
+            #         if dt_id:
+            #             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+            #     except Exception as e:
+            #         current_app.logger.error(e)
 
         return coroutine_full
 
@@ -1071,12 +1071,12 @@ async def new_room_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         current_app.logger.error(e)
     finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+        # try:
+        #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+        #     if dt_id:
+        #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        # except Exception as e:
+        #     current_app.logger.error(e)
         return ConversationHandler.END
 
 
@@ -1125,13 +1125,13 @@ async def change_pet_position_handler(update: Update, context: ContextTypes.DEFA
     except Exception as e:
         current_app.logger.error(e)
         return ConversationHandler.END
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    # finally:
+    #     try:
+    #         current_app.config["DT_FACTORY"].get_dt(dt_id)
+    #         if dt_id:
+    #             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+    #     except Exception as e:
+    #         current_app.logger.error(e)
 
 
 def change_pet_position__room_selected_handler__builder(room_index: int, action: str = "room_chosen"):
@@ -1187,13 +1187,13 @@ def change_pet_position__room_selected_handler__builder(room_index: int, action:
             except Exception as e:
                 current_app.logger.error(e)
                 return ConversationHandler.END
-            finally:
-                try:
-                    current_app.config["DT_FACTORY"].get_dt(dt_id)
-                    if dt_id:
-                        current_app.config["DT_FACTORY"].delete_dt(dt_id)
-                except Exception as e:
-                    current_app.logger.error(e)
+            # finally:
+            #     try:
+            #         current_app.config["DT_FACTORY"].get_dt(dt_id)
+            #         if dt_id:
+            #             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+            #     except Exception as e:
+            #         current_app.logger.error(e)
 
         return coroutine_full
 
@@ -1422,13 +1422,13 @@ async def room_association_change_handler(update: Update, context: ContextTypes.
     except Exception as e:
         current_app.logger.error(e)
         return ConversationHandler.END
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    # finally:
+    #     try:
+    #         current_app.config["DT_FACTORY"].get_dt(dt_id)
+    #         if dt_id:
+    #             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+    #     except Exception as e:
+    #         current_app.logger.error(e)
 
 
 def room_association_change__room_selected_handler__builder(action: str = "room_chosen"):
@@ -1486,13 +1486,13 @@ def room_association_change__room_selected_handler__builder(action: str = "room_
             except Exception as e:
                 current_app.logger.error(e)
                 return ConversationHandler.END
-            finally:
-                try:
-                    current_app.config["DT_FACTORY"].get_dt(dt_id)
-                    if dt_id:
-                        current_app.config["DT_FACTORY"].delete_dt(dt_id)
-                except Exception as e:
-                    current_app.logger.error(e)
+            # finally:
+            #     try:
+            #         current_app.config["DT_FACTORY"].get_dt(dt_id)
+            #         if dt_id:
+            #             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+            #     except Exception as e:
+            #         current_app.logger.error(e)
 
         return coroutine_full
 
@@ -1786,13 +1786,13 @@ async def room_association_change__new_room_handler(update: Update, context: Con
     except Exception as e:
         current_app.logger.error(e)
         return ConversationHandler.END
-    finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    # finally:
+    #     try:
+    #         current_app.config["DT_FACTORY"].get_dt(dt_id)
+    #         if dt_id:
+    #             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+    #     except Exception as e:
+    #         current_app.logger.error(e)
 
 
 def room_association_change__door_selected_handler__builder(action: str = "door_chosen"):
@@ -1842,13 +1842,13 @@ def room_association_change__door_selected_handler__builder(action: str = "door_
             except Exception as e:
                 current_app.logger.error(e)
                 return ConversationHandler.END
-            finally:
-                try:
-                    current_app.config["DT_FACTORY"].get_dt(dt_id)
-                    if dt_id:
-                        current_app.config["DT_FACTORY"].delete_dt(dt_id)
-                except Exception as e:
-                    current_app.logger.error(e)
+            # finally:
+            #     try:
+            #         current_app.config["DT_FACTORY"].get_dt(dt_id)
+            #         if dt_id:
+            #             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+            #     except Exception as e:
+            #         current_app.logger.error(e)
 
         return coroutine_full
 
@@ -2107,12 +2107,12 @@ async def room_association_change_handler_entry(update: Update, context: Context
     except Exception as e:
         current_app.logger.error(e)
     finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    #     try:
+    #         current_app.config["DT_FACTORY"].get_dt(dt_id)
+    #         if dt_id:
+    #             current_app.config["DT_FACTORY"].delete_dt(dt_id)
+    #     except Exception as e:
+    #         current_app.logger.error(e)
 
         return ConversationHandler.END
 
@@ -2221,11 +2221,11 @@ async def room_association_change_handler_exit(update: Update, context: ContextT
     except Exception as e:
         current_app.logger.error(e)
     finally:
-        try:
-            current_app.config["DT_FACTORY"].get_dt(dt_id)
-            if dt_id:
-                current_app.config["DT_FACTORY"].delete_dt(dt_id)
-        except Exception as e:
-            current_app.logger.error(e)
+        # try:
+        #     current_app.config["DT_FACTORY"].get_dt(dt_id)
+        #     if dt_id:
+        #         current_app.config["DT_FACTORY"].delete_dt(dt_id)
+        # except Exception as e:
+        #     current_app.logger.error(e)
 
         return ConversationHandler.END
